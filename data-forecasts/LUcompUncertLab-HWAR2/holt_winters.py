@@ -7,8 +7,9 @@ import numpy as np
 import pandas as pd
 
 import stan
-
 import statsmodels.api as sm
+
+import argparse
 
 #--find next monday
 def next_monday(dat=0):
@@ -52,20 +53,23 @@ def define_submission_date(num_days_until_monday):
 
 if __name__ == "__main__":
 
-    flu = pd.read_csv("../../2022FluSightNew/data-truth/truth-Incident Hospitalizations.csv")
+    #--accepts one parameter that subsets data to Location
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--LOCATION',type=str)
+
+    args = parser.parse_args()
+    LOCATION     = args.LOCATION
+ 
+    flu = pd.read_csv("../../data-truth/truth-Incident Hospitalizations.csv")
     flu["date"] = pd.to_datetime(flu.date)
     
     flu2022 = flu.loc[flu.date > "2021-10-01"]
 
-    LOCATION = "US"
-    US = flu2022.loc[flu2022.location==LOCATION]
+    location_specific_values = flu2022.loc[flu2022.location==LOCATION]
 
-    cut_US = US.iloc[:18]
-
-    #detrend
-    ys = cut_US.value.values
-    xs = np.arange(0,len(cut_US))
-
+    #--detrend using the Holt Winters procedure
+    ys = location_specific_values.value.values
+    xs = np.arange(0,len(location_specific_values))
     T = len(ys)
 
     def fit_HW(ys):
@@ -76,10 +80,11 @@ if __name__ == "__main__":
         y_infer, y_forecast  = model.fittedvalues,model.forecast(4)
         return y_infer, y_forecast
     y_infer, y_forecast = fit_HW(ys)
-    
+
+    #--compute residuals from Holt Winters procedure
     resids = ys - y_infer
     
-    #standardize 
+    #--standardize the residuals by subtracting mean and diviiding by std 
     params = namedtuple("params","avg sd")
     stand__params   = params( avg = resids.mean(), sd = resids.std() )
     centered_resids = (resids - stand__params.avg)/stand__params.sd
@@ -144,10 +149,9 @@ if __name__ == "__main__":
         }  
     '''
     model_data = {"T":len(centered_resids), "y":centered_resids}
-    posterior = stan.build(stan_model, data=model_data)
-    fit = posterior.sample(num_chains=4, num_samples=1000)
+    posterior  = stan.build(stan_model, data=model_data)
+    fit        = posterior.sample(num_chains=4, num_samples=1000)
     
-    #uncentered_second_diffs = (fit.get("y_hat")*second_diffs__params.sd) + second_diffs__params.avg
     uncentered_resids = fit.get("y_hat")*stand__params.sd + stand__params.avg
     
     orig = {"n":[], "pred":[], "t":[]}
@@ -178,17 +182,19 @@ if __name__ == "__main__":
 
     wide = pd.pivot_table(index = "n", columns = "t", values = "pred", data = predictions)
 
-    Q = np.round([0.01,0.025] + list(np.arange(0.05,0.95+0.05,0.05)) + [0.975,0.99],2)
+    Q = np.round([0.01,0.025] + list(np.arange(0.05,0.95+0.05,0.05)) + [0.975,0.99],3)
     N = len(Q)
     
     quantiles = np.percentile(wide,100*Q,axis=0)
 
+    #--compute all time information for forecast submission
     number_of_days_until_monday = next_monday()
     monday = next_monday(True)
     
     next_sat = next_saturday_after_monday_submission( number_of_days_until_monday )
     target_end_dates = collect_target_end_dates(next_sat)
     
+    #--store all forecasts in a DataFrame
     forecast = {"target":[], "target_end_date":[], "quantile":[], "value":[]}
     for n,week_ahead_prediction in enumerate(quantiles.T):
         forecast["value"].extend(week_ahead_prediction)
@@ -202,28 +208,12 @@ if __name__ == "__main__":
     forecast["location"]      = LOCATION
     forecast["type"]          = "quantile"
     forecast["forecast_date"] = monday
-    
-    
-    # times = np.arange(reference_time,reference_time+4)
-    
-    # fig,ax = plt.subplots()
 
-    # ax.plot(US.value.values, color = "black", alpha=0.5)
-    # ax.plot(cut_US.value.values,color="black")
+    #--format quantile to three decimals
+    forecast['quantile'] = ["{:0.3f}".format(q) for q in forecast["quantile"]]
 
-    # #ax.plot(yhat, color="red")
+    #--format values to three decimals
+    forecast['value'] = ["{:0.3f}".format(q) for q in forecast["value"]]
     
-    # sns.lineplot(x="t",y="pred",data = inferences,ax=ax)
-    
-    #wide = pd.pivot_table(index = "n", columns = "t", values = "pred", data = predictions)
-    #quantiles = np.percentile(wide,[2.5,10,50,90,97.5],axis=0)
-
-    # ax.fill_between(times, quantiles[0], quantiles[-1], color="blue",alpha=0.1 )
-    # ax.fill_between(times, quantiles[1], quantiles[-2], color="blue",alpha=0.1 )
-    # ax.plot(times, quantiles[2], color="blue" )
-
-    # ax.set_xlim(0,40)
-
-    # plt.show()
-
-    
+    #--output data
+    forecast.to_csv("./forecasts/location__{:s}.csv".format(LOCATION),index=False)
