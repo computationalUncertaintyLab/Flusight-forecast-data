@@ -150,7 +150,7 @@ if __name__ == "__main__":
     '''
     model_data = {"T":len(centered_resids), "y":centered_resids}
     posterior  = stan.build(stan_model, data=model_data)
-    fit        = posterior.sample(num_chains=4, num_samples=1000)
+    fit        = posterior.sample(num_chains=1, num_samples=5000)
     
     uncentered_resids = fit.get("y_hat")*stand__params.sd + stand__params.avg
     
