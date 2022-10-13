@@ -22,6 +22,6 @@ export PYTHONPATH=$PYTHONPATH:$HOME/pypkgs
 
 #--export environmental variables
 export LOCATION=${LOCATION}
-make python3 holt_winters.py --LOCATION ${LOCATION}
+python3 holt_winters.py --LOCATION ${LOCATION}
  
 exit
