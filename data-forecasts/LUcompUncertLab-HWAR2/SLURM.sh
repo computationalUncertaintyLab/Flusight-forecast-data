@@ -16,9 +16,10 @@
 cd ${SLURM_SUBMIT_DIR} # cd to directory where you submitted the job
  
 #--launch job
+module load anaconda3
 
 #--export environmental variables
 export LOCATION=${LOCATION}
-python3 holt_winters.py --LOCATION ${LOCATION}
+python3 holt_and_stacked_arimas.py --LOCATION ${LOCATION}
  
 exit
