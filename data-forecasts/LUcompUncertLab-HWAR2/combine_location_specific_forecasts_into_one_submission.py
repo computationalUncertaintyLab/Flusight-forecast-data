@@ -21,6 +21,16 @@ if __name__ == "__main__":
 
         #--format values to three decimals
         d['value'] = ["{:0.3f}".format(q) for q in d["value"]]
+
+        #--format location
+        locations = []
+        for loc in d.location:
+            if loc=="US":
+                pass
+            else:
+                loc = "{:02d}".format(int(loc))
+            locations.append(loc)
+        d['location'] = locations
         
         if n==0:
             d.to_csv("./{:s}-{:s}.csv".format(monday_submission,model_name),index=False,header=True,mode="w")

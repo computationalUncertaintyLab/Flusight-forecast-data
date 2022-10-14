@@ -20,15 +20,21 @@ if __name__ == "__main__":
     forecasts = pd.read_csv("{:s}-{:s}.csv".format(monday_submission,model_name))
 
     truths    = pd.read_csv("../../data-truth/truth-Incident Hospitalizations.csv")
-    truths    = truths.loc[ truths["date"] > "2022-06-01"]
+    truths    = truths.loc[ truths["date"] > "2022-03-01"]
 
     pdf = matplotlib.backends.backend_pdf.PdfPages("./monday_subission_viz/{:s}-{:s}.pdf".format(monday_submission,model_name))
 
     all_locations = forecasts.location.unique()
 
-    locations_pieces = np.array_split(all_locations,6)
+    #--collect all locations and location names
+    loc_and_location_names = truths[["location","location_name"]]
+    loc2locname = { row.location:row.location_name for idx,row in loc_and_location_names.iterrows()}
+    locname2loc = { row.location_name:row.location for idx,row in loc_and_location_names.iterrows()}
 
-    for locations in locations_pieces:
+    locations_pieces = np.array_split(sorted(locname2loc),6)
+
+    for location_names in locations_pieces:
+        locations = [ locname2loc[name] for name in location_names]
         subset = forecasts.loc[forecasts.location.isin(locations)]
 
         plt.style.use("fivethirtyeight")
@@ -36,6 +42,8 @@ if __name__ == "__main__":
         axs = axs.flatten()
         
         for n,(location, forecast) in enumerate(subset.groupby(["location"])):
+            location_name = loc2locname[location]
+            
             ax = axs[n]
 
             #--plot truth
@@ -51,7 +59,8 @@ if __name__ == "__main__":
 
             dates = pd.to_datetime(forecast__wide.index)
             
-            ax.plot(dates, forecast__wide[0.500], lw=1)
+            ax.plot(dates, forecast__wide[0.500], lw=1,color="blue")
+            ax.scatter(dates, forecast__wide[0.500],s=4, color="blue")
             
             ax.fill_between(dates, forecast__wide[0.250],forecast__wide[0.750], alpha=0.10, color="blue")
             ax.fill_between(dates, forecast__wide[0.100],forecast__wide[0.900], alpha=0.10, color="blue")
@@ -65,10 +74,11 @@ if __name__ == "__main__":
                 ax.set_xticklabels([])
             if n not in {0,3,6}:
                 ax.set_ylabel("")
+            ax.tick_params(axis='x', labelrotation = 90, labelsize=6)
 
-            location_name = truth.location_name.iloc[0]
             ax.text(0.99,0.99,s="Loc = {:s}/{:s}".format(location,location_name)
                     ,fontsize=8,transform=ax.transAxes,ha="right",va="top")
-                
+
+        fig.set_tight_layout(True)
         pdf.savefig(fig)
     pdf.close()
