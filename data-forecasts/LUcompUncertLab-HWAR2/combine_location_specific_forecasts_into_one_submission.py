@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-from submission_times.py import *
+from submission_times import *
 
 from glob import glob
 
@@ -14,16 +14,15 @@ if __name__ == "__main__":
     
     for n,fil in enumerate(glob("./forecasts/*.csv")):
         d = pd.read_csv(fil)
-        d[""target	target_end_date	quantile	value	location	type	forecast_date
-        if n==0:
-            
+        d = d[["target", "target_end_date","quantile","value","location","type","forecast_date"]]
+
+        #--format quantile to three decimals
+        d['quantile'] = ["{:0.3f}".format(q) for q in d["quantile"]]
+
+        #--format values to three decimals
+        d['value'] = ["{:0.3f}".format(q) for q in d["value"]]
         
-    
-
-
-
-
-
-
-    
-
+        if n==0:
+            d.to_csv("./{:s}-LUcompUncertLab-HWAR2.csv".format(monday_submission),index=False,header=True,mode="w")
+        else: 
+            d.to_csv("./{:s}-LUcompUncertLab-HWAR2.csv".format(monday_submission),index=False,header=False,mode="a")
