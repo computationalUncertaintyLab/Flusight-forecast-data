@@ -47,7 +47,7 @@ if __name__ == "__main__":
     flu_hosps = flu_hosps.merge(HHS_Location, on = ["location"])
     flu_hosps["HHS"] = flu_hosps.HHS.astype(str)
     
-    influenza_like_illness = pd.read_csv("./epidataFormated.csv")
+    influenza_like_illness = pd.read_csv("./epidataFormated.csv.gz")
 
     #--collect most recent ILI
     influenza_like_illness = influenza_like_illness.groupby(["Location","EW"]).apply( lambda x: x.sort_values("releaseEW").iloc[-1] ).reset_index(drop=True)
@@ -62,26 +62,22 @@ if __name__ == "__main__":
 
     influenza_like_illness = influenza_like_illness[ ["HHS","EW","year","week","date","wili"] ]
 
+
+    influenza_like_illness__wide = pd.pivot_table(index = ["HHS","week"], columns = "year", values = ["wili"], data= influenza_like_illness)
+    influenza_like_illness__wide.columns = [  for (x,y) in influenza_like_illness__wide.columns] 
+    
     stacked_flu = pd.DataFrame()
     for year,subset in influenza_like_illness.groupby(["year"]):
 
-        if year==2018:
-            break
+        break
+    
+
         subset = subset[["HHS","week","wili"]]
         subset = subset.rename(columns = {"wili":"wili{:d}".format(year)})
        
         combined_data = flu_hosps.merge(subset,on=["HHS","week"], indicator=True,how="left")
 
-        #--interpolate any missing flu values
-        def interpolate(args):
-            
-
-        
-        combined_data.groupby(["location"])
-
-        
-        
-        stacked_flu = stacked_flu.append(influenza_like_illness__wide)
+        stacked_flu = stacked_flu.append(combined_data)
         
     
     flu_hosps = flu_hosps.merge( influenza_like_illness, on = ["HHS","week"] )
