@@ -190,4 +190,4 @@ if __name__ == "__main__":
     ensemble_forecasts = ensemble_forecasts[ ["target", "target_end_date","quantile","value","location","type","forecast_date"]  ]
     
     #--output data
-    forecast.to_csv("./forecasts/location__{:s}.csv".format(LOCATION),index=False)
+    ensemble_forecasts.to_csv("./forecasts/location__{:s}.csv".format(LOCATION),index=False)
