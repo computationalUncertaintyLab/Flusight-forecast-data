@@ -154,7 +154,9 @@ if __name__ == "__main__":
             quantiles["quantile"].extend(QUANTILES)
 
             F,f,P = from_forecast_2_dist( model.get_forecast(int(L)+1), -1 )
-            quantiles["values"].extend( P(QUANTILES) )
+
+            #--need to uncenter these values
+            quantiles["values"].extend( P(QUANTILES)*stand__params.sd + stand__params.avg )
     quantiles = pd.DataFrame(quantiles)
 
     forecasts = W.merge(quantiles, on = ["horizon","model"])
@@ -165,6 +167,9 @@ if __name__ == "__main__":
     ensemble_forecasts = ensemble_forecasts.merge(holt_winters_trend, on = ["horizon"])
     ensemble_forecasts["value"] = ensemble_forecasts["value"] + ensemble_forecasts["trend"]
 
+    #--clip quantiles to 0
+    ensemble_forecasts.loc[ ensemble_forecasts["value"] <0, "value"] = 0.  
+    
     #--compute all time information for forecast submission
     number_of_days_until_monday = next_monday()
     monday = next_monday(True)
