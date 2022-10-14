@@ -11,7 +11,7 @@ from glob import glob
 if __name__ == "__main__":
 
     monday_submission = next_monday(1)
-    
+    model_name = collect_model_name()
     for n,fil in enumerate(glob("./forecasts/*.csv")):
         d = pd.read_csv(fil)
         d = d[["target", "target_end_date","quantile","value","location","type","forecast_date"]]
@@ -23,6 +23,6 @@ if __name__ == "__main__":
         d['value'] = ["{:0.3f}".format(q) for q in d["value"]]
         
         if n==0:
-            d.to_csv("./{:s}-LUcompUncertLab-HWAR2.csv".format(monday_submission),index=False,header=True,mode="w")
+            d.to_csv("./{:s}-{:s}.csv".format(monday_submission,model_name),index=False,header=True,mode="w")
         else: 
-            d.to_csv("./{:s}-LUcompUncertLab-HWAR2.csv".format(monday_submission),index=False,header=False,mode="a")
+            d.to_csv("./{:s}-{:s}.csv".format(monday_submission,model_name),index=False,header=False,mode="a")
