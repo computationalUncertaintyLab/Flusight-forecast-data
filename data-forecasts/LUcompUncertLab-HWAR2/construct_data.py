@@ -32,6 +32,17 @@ def link_HHS_to_state():
             d["location"].append(state)
     d = pd.DataFrame(d)
     return d
+
+def create_year_week_sorted():
+    d = {"year":[],"week":[]}
+
+    for year in np.arange(2010,2023+1):
+        for week in list(np.arange(40,53+1)) + list(np.arange(1,39+1)):
+            d['year'].append(year)
+            d['week'].append(week)
+    d = pd.DataFrame(d)
+
+    return d
     
 if __name__ == "__main__":
 
@@ -42,45 +53,35 @@ if __name__ == "__main__":
     #--add in epidemic week
     flu_hosps["EW"]   = [ Week.fromdate(datetime.strptime(x,'%Y-%m-%d')).cdcformat() for x in flu_hosps["date"]]
     flu_hosps["week"] = [ Week.fromdate(datetime.strptime(x,'%Y-%m-%d')).week for x in flu_hosps["date"]]
+    flu_hosps["year"] = [ Week.fromdate(datetime.strptime(x,'%Y-%m-%d')).year for x in flu_hosps["date"]]
 
     #--add in HHS
     flu_hosps = flu_hosps.merge(HHS_Location, on = ["location"])
     flu_hosps["HHS"] = flu_hosps.HHS.astype(str)
     
-    influenza_like_illness = pd.read_csv("./epidataFormated.csv.gz")
-
-    #--collect most recent ILI
-    influenza_like_illness = influenza_like_illness.groupby(["Location","EW"]).apply( lambda x: x.sort_values("releaseEW").iloc[-1] ).reset_index(drop=True)
+    influenza_like_illness = pd.read_csv("./ili_data/epidata__original.csv")
 
     #--add in saturdays
-    influenza_like_illness["date"] = [ Week.fromstring(str(x)).enddate().strftime("%Y-%m-%d") for x in influenza_like_illness.EW ]
-    influenza_like_illness["year"] = [ Week.fromstring(str(x)).year for x in influenza_like_illness.EW ]
-    influenza_like_illness["week"] = [ Week.fromstring(str(x)).week for x in influenza_like_illness.EW ]
+    influenza_like_illness["date"] = [ Week.fromstring(str(x)).enddate().strftime("%Y-%m-%d") for x in influenza_like_illness.epiweek ]
+    influenza_like_illness["year"] = [ Week.fromstring(str(x)).year for x in influenza_like_illness.epiweek ]
+    influenza_like_illness["week"] = [ Week.fromstring(str(x)).week for x in influenza_like_illness.epiweek ]
     
     #--reformat location for ILI dataset
-    influenza_like_illness["HHS"] = [ "US" if x==10 else str(int(x)+1) for x in influenza_like_illness.Location ]
+    influenza_like_illness["HHS"] = [ "US" if x=="nat" else str(x[3:]) for x in influenza_like_illness.region ]
+    influenza_like_illness = influenza_like_illness.rename(columns = {"epiweek":"EW"})
 
     influenza_like_illness = influenza_like_illness[ ["HHS","EW","year","week","date","wili"] ]
 
-
     influenza_like_illness__wide = pd.pivot_table(index = ["HHS","week"], columns = "year", values = ["wili"], data= influenza_like_illness)
-    influenza_like_illness__wide.columns = [  for (x,y) in influenza_like_illness__wide.columns] 
+    influenza_like_illness__wide.columns = [ str(x)+str(y) for (x,y) in influenza_like_illness__wide.columns] 
+
+    influenza_like_illness__wide = influenza_like_illness__wide.reset_index()
     
-    stacked_flu = pd.DataFrame()
-    for year,subset in influenza_like_illness.groupby(["year"]):
-
-        break
+    flu_hosps_stacked = flu_hosps.merge( influenza_like_illness__wide, on = ["HHS","week"])
     
+    #--sort rows by season
+    year_and_week_by_season = create_year_week_sorted()
+    flu_hosps_stacked =     year_and_week_by_season.merge(flu_hosps_stacked, on = ["year","week"])
 
-        subset = subset[["HHS","week","wili"]]
-        subset = subset.rename(columns = {"wili":"wili{:d}".format(year)})
-       
-        combined_data = flu_hosps.merge(subset,on=["HHS","week"], indicator=True,how="left")
-
-        stacked_flu = stacked_flu.append(combined_data)
-        
-    
-    flu_hosps = flu_hosps.merge( influenza_like_illness, on = ["HHS","week"] )
-
-
-    
+    flu_hosps_stacked.to_csv("./stacked_influenza_data.csv",index=False)
+   
