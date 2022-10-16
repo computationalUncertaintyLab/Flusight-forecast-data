@@ -9,24 +9,37 @@ import pandas as pd
 import stan
 import statsmodels.api as sm
 
-import argparse
+from submission_times import *
 
-from submission_times.py import *
+import argparse
+from datetime import datetime
 
 if __name__ == "__main__":
 
     #--accepts one parameter that subsets data to Location
     parser = argparse.ArgumentParser()
-    parser.add_argument('--LOCATION',type=str)
-
+    parser.add_argument('--LOCATION'     ,type=str) 
+    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    
     args = parser.parse_args()
-    LOCATION     = args.LOCATION
- 
+    LOCATION      = args.LOCATION
+    RETROSPECTIVE = args.RETROSPECTIVE
+
+    if RETROSPECTIVE:
+        END_DATE      = args.END_DATE
+    
     flu = pd.read_csv("../../data-truth/truth-Incident Hospitalizations.csv")
     flu["date"] = pd.to_datetime(flu.date)
     
-    flu2022 = flu.loc[flu.date > "2021-10-01"]
+    flu2022 = flu.loc[flu.date > "2021-10-01"] #start training Oct 2021
 
+    if RETROSPECTIVE:
+        flu2022 = flu2022.loc[ flu2022.date <= datetime.strptime(args.END_DATE,"%Y-%m-%d")]
+
+    most_recent_date = sorted(flu2022["date"])[-1]
+    print("Training up to {:s}".format(most_recent_date.strftime("%Y-%m-%d")))
+        
     location_specific_values = flu2022.loc[flu2022.location==LOCATION]
 
     #--detrend using the Holt Winters procedure
@@ -112,7 +125,7 @@ if __name__ == "__main__":
     '''
     model_data = {"T":len(centered_resids), "y":centered_resids}
     posterior  = stan.build(stan_model, data=model_data)
-    fit        = posterior.sample(num_chains=1, num_samples=5000)
+    fit        = posterior.sample(num_chains=4, num_samples=1000)
     
     uncentered_resids = fit.get("y_hat")*stand__params.sd + stand__params.avg
     
@@ -150,10 +163,16 @@ if __name__ == "__main__":
     quantiles = np.percentile(wide,100*Q,axis=0)
 
     #--compute all time information for forecast submission
-    number_of_days_until_monday = next_monday()
-    monday = next_monday(True)
-    
-    next_sat = next_saturday_after_monday_submission( number_of_days_until_monday )
+    if RETROSPECTIVE:
+        number_of_days_until_monday = next_monday(from_date=END_DATE)
+        monday = next_monday(True, from_date=END_DATE)
+
+        next_sat = next_saturday_after_monday_submission( number_of_days_until_monday, from_date=END_DATE )    
+    else:
+        number_of_days_until_monday = next_monday()
+        monday = next_monday(True)
+
+        next_sat = next_saturday_after_monday_submission( number_of_days_until_monday)    
     target_end_dates = collect_target_end_dates(next_sat)
     
     #--store all forecasts in a DataFrame
@@ -178,4 +197,7 @@ if __name__ == "__main__":
     forecast['value'] = ["{:0.3f}".format(q) for q in forecast["value"]]
     
     #--output data
-    forecast.to_csv("./forecasts/location__{:s}.csv".format(LOCATION),index=False)
+    if RETROSPECTIVE:
+        forecast.to_csv("./retrospective_analysis/location_{:s}_end_{:s}.csv".format(LOCATION,END_DATE),index=False)
+    else:
+        forecast.to_csv("./forecasts/location__{:s}.csv".format(LOCATION),index=False)

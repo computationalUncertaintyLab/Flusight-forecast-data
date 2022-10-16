@@ -4,7 +4,7 @@ def IS(quantiles,y,alpha):
     l,u = quantiles
     return u-l + (2/alpha)*(l-y)*(1 if y <l else 0) + (2/alpha)*(y-u)*(1 if y >u else 0)
 
-def WIS(quantiles,y):
+def WIS(quantiles,y=None):
     import pandas as pd   
     '''
     quantiles: A list of tuples that describes each of the (1-alpha) central predictions intervals. 
@@ -12,10 +12,12 @@ def WIS(quantiles,y):
     between those two numebrs with probability (1-alpha). For example, a (1-0.05) central prediction 
     interval---[l,u]---is an interval such that we assign a probability of 0.95 to the truth falling 
     inside of [l,u].
-    y: the true value
-    alphas: A list of alphas that correspond to the above quantiles.
     '''
 
+    #--collect truth from quantiles file
+    if y is None:
+        y = float(quantiles.iloc[0]["truth"])
+    
     #--find median value
     median = quantiles.loc[ quantiles["quantile"]==0.50,"value" ].values
 

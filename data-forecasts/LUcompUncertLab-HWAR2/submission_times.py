@@ -1,8 +1,13 @@
 #mcandrew
 
-def next_monday(dat=0):
+#--find next monday
+def next_monday(dat=0, from_date=-1):
     from datetime import datetime,timedelta
-    dt  = datetime.now()
+
+    if from_date==-1:
+        dt  = datetime.now()
+    else:
+        dt = datetime.strptime(from_date,"%Y-%m-%d")
     day = dt.weekday()
 
     counter = 0
@@ -14,10 +19,15 @@ def next_monday(dat=0):
         return (dt+timedelta(days=counter)).strftime("%Y-%m-%d")
     return counter
 
-def next_saturday_after_monday_submission( num_days_until_monday ):
+def next_saturday_after_monday_submission( num_days_until_monday, from_date=-1 ):
     from datetime import datetime, timedelta
-    dt  = datetime.now()+ timedelta(days=num_days_until_monday)
 
+    if from_date==-1:
+        dt  = datetime.now()+ timedelta(days=num_days_until_monday)
+    else:
+        dt = datetime.strptime(from_date,"%Y-%m-%d")
+        dt = dt + timedelta(days=num_days_until_monday)
+        
     while dt.weekday() !=5 :
         dt = dt + timedelta(days=1)
     return dt.strftime("%Y-%m-%d")
