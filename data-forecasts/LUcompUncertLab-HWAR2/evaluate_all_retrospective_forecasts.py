@@ -29,8 +29,11 @@ if __name__ == "__main__":
         WIS_scores = forecast_and_truths.groupby(["target","target_end_date","location","forecast_date"]).apply(lambda x: pd.Series({"WIS":WIS(x)}))
         WIS_scores = WIS_scores.reset_index()
 
+        #--add model name
+        WIS_scores["model_name"] = "Holt Winters + AR(2)"
+        
         #--specify order of columns
-        WIS_scores = WIS_scores[ ["target","target_end_date","location","forecast_date","WIS"]  ]
+        WIS_scores = WIS_scores[ ["model_name","target","target_end_date","location","forecast_date","WIS"]  ]
         
         #--write
         if n==0:
