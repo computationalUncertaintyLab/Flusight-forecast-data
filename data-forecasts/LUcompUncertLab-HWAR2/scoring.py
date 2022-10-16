@@ -1,15 +1,11 @@
 #mcandrew
 
-import sys
-import numpy as np
-import pandas as pd
-
-
 def IS(quantiles,y,alpha):
     l,u = quantiles
     return u-l + (2/alpha)*(l-y)*(1 if y <l else 0) + (2/alpha)*(y-u)*(1 if y >u else 0)
 
 def WIS(quantiles,y):
+    import pandas as pd   
     '''
     quantiles: A list of tuples that describes each of the (1-alpha) central predictions intervals. 
     A (1-alpha) central prediction intervals is a pair of values such that we expect the truth to fall 
