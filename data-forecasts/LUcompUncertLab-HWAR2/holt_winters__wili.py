@@ -46,7 +46,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     LOCATION     = args.LOCATION
- 
+
+    LOCATION = "01"
+    
     flu = pd.read_csv("../../data-truth/truth-Incident Hospitalizations.csv")
     flu["date"] = pd.to_datetime(flu.date)
 
@@ -60,14 +62,24 @@ if __name__ == "__main__":
     wili_cols = [x for x in location_specific_values.columns if 'wili' in x]
     ys = location_specific_values.value.values
     X  = location_specific_values[ wili_cols ]
+
+    mu_yhat = ys.mean()
+    sd_yhat = ys.std()
+    c_ys = (ys - mu_yhat)/sd_yhat
+
+    mu_X = X.mean(0)
+    sd_X = X.std(0)
+    c_X  = (X - mu_X)/sd_X
    
     next_four_weeks = find_next_four_weeks(location_specific_values)
     
     #--detrend by fitting wili to hosps
-    model   = OLS(ys,X).fit()
+    model   = OLS(c_ys,c_X).fit()
     y_infer = model.predict()
 
     Xstar    = location_specific_values.loc[ location_specific_values.week.isin(next_four_weeks), wili_cols  ]
+    c_Xstar  = (Xstar-mu_X)/sd_X
+    
     y_forecast = model.predict(Xstar)
     
     xs  = np.arange(0,len(location_specific_values))

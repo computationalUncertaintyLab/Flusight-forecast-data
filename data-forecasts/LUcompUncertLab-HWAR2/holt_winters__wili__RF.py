@@ -57,6 +57,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     LOCATION     = args.LOCATION
+
+    LOCATION="42"
     
     print("Running {:s}".format(LOCATION))
     
@@ -170,7 +172,7 @@ if __name__ == "__main__":
     centered_resids = (resids - stand__params.avg)/stand__params.sd
 
     #--arima
-    model = arima(centered_resids, order = (2,0,0))
+    model = arima(centered_resids, order = (1,1,1))
     model = model.fit()
 
     #--build quantile forecasts

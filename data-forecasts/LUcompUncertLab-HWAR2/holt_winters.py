@@ -14,6 +14,8 @@ from submission_times import *
 import argparse
 from datetime import datetime
 
+from glob import glob
+
 if __name__ == "__main__":
 
     #--accepts one parameter that subsets data to Location
@@ -28,7 +30,18 @@ if __name__ == "__main__":
 
     if RETROSPECTIVE:
         END_DATE      = args.END_DATE
-    
+
+        #--if this file already exists then exit.
+        if LOCATION=="US":
+            file_to_be_generated = "./retrospective_analysis/location_{:s}_end_{:s}.csv".format("US",END_DATE)
+        else:
+            file_to_be_generated = "./retrospective_analysis/location_{:02d}_end_{:s}.csv".format(int(LOCATION),END_DATE)
+        all_retro_files      = glob("./retrospective_analysis/*.csv")
+
+        if file_to_be_generated in all_retro_files:
+            print("This retrospective forecast already exists")
+            sys.exit()
+
     flu = pd.read_csv("../../data-truth/truth-Incident Hospitalizations.csv")
     flu["date"] = pd.to_datetime(flu.date)
     

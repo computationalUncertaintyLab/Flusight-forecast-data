@@ -26,6 +26,10 @@ if __name__ == "__main__":
         
         forecast_and_truths = forecast.merge(truths, left_on = ["location","target_end_date"],right_on = ["location","date"])
 
+        #--no truth for this forecast
+        if len(forecast_and_truths) == 0:
+            continue
+        
         WIS_scores = forecast_and_truths.groupby(["target","target_end_date","location","forecast_date"]).apply(lambda x: pd.Series({"WIS":WIS(x)}))
         WIS_scores = WIS_scores.reset_index()
 
