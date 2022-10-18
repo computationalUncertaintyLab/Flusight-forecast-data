@@ -45,7 +45,7 @@ if __name__ == "__main__":
     flu = pd.read_csv("../../data-truth/truth-Incident Hospitalizations.csv")
     flu["date"] = pd.to_datetime(flu.date)
     
-    flu2022 = flu.loc[flu.date > "2021-10-01"] #start training Oct 2021
+    flu2022 = flu.loc[flu.date > "2022-03-01"] #start training Oct 2021
 
     if RETROSPECTIVE:
         flu2022 = flu2022.loc[ flu2022.date <= datetime.strptime(args.END_DATE,"%Y-%m-%d")]
