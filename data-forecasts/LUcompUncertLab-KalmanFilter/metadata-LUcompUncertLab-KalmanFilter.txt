@@ -1,8 +1,8 @@
 team_name: computational uncertainty lab
 model_name: Kalman Filter type model
 model_abbr: LUcompUncertLab-KalmanFilter
-model_contributors: tom mcandrew (Lehigh Univeristy)
-website_url: 
+model_contributors: tom mcandrew (Lehigh University)
+website_url: https://github.com/computationalUncertaintyLab/
 license: cc-by-4.0
 team_model_designation: proposed
 ensemble_of_hub_models: false 
