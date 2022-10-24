@@ -161,10 +161,10 @@ def model_seasons():
        }
 
        //latent process and states
-        real S [T[1], seasons];
-        real I [T[1], seasons];
-        real i [T[1], seasons];
-        real R [T[1], seasons];
+        real <lower=0> S [T[1], seasons];
+        real <lower=0> I [T[1], seasons];
+        real <lower=0> i [T[1], seasons];
+        real <lower=0> R [T[1], seasons];
 
        //set the initial time values for the above states
        for (s in 1:seasons){
@@ -210,10 +210,10 @@ def model_seasons():
     }
     generated quantities {
 
-        real Shat [28];
-        real Ihat [28];
-        real ihat [28];
-        real Rhat [28];
+        real <lower=0> Shat [28];
+        real <lower=0> Ihat [28];
+        real <lower=0> ihat [28];
+        real <lower=0> Rhat [28];
 
         real log_beta_hat = log_beta[T[seasons],seasons];
         real beta_hat     = exp(log_beta_hat);
@@ -260,14 +260,17 @@ def from_date_to_epiweek(x):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--LOCATION'     ,type=str) 
-    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
-    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--LOCATION'     ,type=str) 
+    # parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    # parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
     
-    args = parser.parse_args()
-    LOCATION      = args.LOCATION
-    RETROSPECTIVE = args.RETROSPECTIVE
+    # args = parser.parse_args()
+    # LOCATION      = args.LOCATION
+    # RETROSPECTIVE = args.RETROSPECTIVE
+
+    LOCATION = '50'
+    RETROSPECTIVE=0
    
     hhs_data = pd.read_csv("../../data-truth/truth-Incident Hospitalizations-daily.csv")
 
