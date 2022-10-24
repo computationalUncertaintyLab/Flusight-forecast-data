@@ -3,16 +3,12 @@
 import sys
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 from submission_times import *
 
 import argparse
 
 import stan
-
-#import pyjags
 
 def model_single():
     model_code = '''
