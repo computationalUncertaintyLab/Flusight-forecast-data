@@ -264,19 +264,15 @@ def from_date_to_epiweek(x):
 
 if __name__ == "__main__":
 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--LOCATION'     ,type=str) 
-    # parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
-    # parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--LOCATION'     ,type=str) 
+    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
     
-    # args = parser.parse_args()
-    # LOCATION      = args.LOCATION
-    # RETROSPECTIVE = args.RETROSPECTIVE
-
-
-    LOCATION = '36'
-    RETROSPECTIVE = 0
-    
+    args = parser.parse_args()
+    LOCATION      = args.LOCATION
+    RETROSPECTIVE = args.RETROSPECTIVE
+   
     hhs_data = pd.read_csv("../../data-truth/truth-Incident Hospitalizations-daily.csv")
 
     populations = pd.read_csv("../../data-locations/locations.csv")
@@ -300,7 +296,6 @@ if __name__ == "__main__":
     training_data[1,:C] = current_season_flu.value.values + 1 #--adding a one
     training_data[1,C:] = 1. #--adding some small number 
 
-
     data = { "S0":S0
              ,"seasons":2
              ,"cases": training_data.astype(int).T
@@ -315,32 +310,34 @@ if __name__ == "__main__":
     posterior  = stan.build(model_code, data=data)
     fit        = posterior.sample(num_chains=4, num_samples=1000)
  
-
     #--current season
-    current_season_i = samples['i'][:,1,:,:]
+    current_season_i = fit.get("ihat")
+    s0s = fit.get("s0")[0]
 
     infections = {"t":[],"sample":[],"value":[]}
-    for time,t in enumerate(current_season_i):
-        for sample,value in enumerate(t.flatten()):
+    for sample,values in enumerate(current_season_i.T):
+
+        s0 = s0s[sample]
+        for time,value in enumerate(values):
             infections['t'].append(time)
             infections['sample'].append(sample)
-            infections['value'].append(value*S0)
+            infections['value'].append(value*S0*s0)
     infections = pd.DataFrame(infections)
     
     #--forecast next 28 days
-    predictions = infections.loc[ (infections.t >=T+1) & (infections.t<=T+1+28)]
+    predictions = infections
 
     weekly_agg = {"t":[],"wk":[]}
-    for n,t in enumerate(np.arange(T+1,T+1+28)):
+    for t in np.arange(0,28):
         weekly_agg['t'].append(t)
 
-        if 0<=n<=6:
+        if 0<=t<=6:
             weekly_agg['wk'].append(1)
-        elif 7<=n<=13:
+        elif 7<=t<=13:
             weekly_agg['wk'].append(2)
-        elif 14<=n<=20:
+        elif 14<=t<=20:
             weekly_agg['wk'].append(3)
-        elif 21<=n<=28:
+        elif 21<=t<=28:
             weekly_agg['wk'].append(4)
     weekly_agg = pd.DataFrame(weekly_agg)
 
@@ -391,7 +388,6 @@ if __name__ == "__main__":
     #--format values to three decimals
     forecast['value'] = ["{:0.3f}".format(q) for q in forecast["value"]]
 
-    print(forecast)
     #--output data
     if RETROSPECTIVE:
         forecast.to_csv("./retrospective_analysis/location_{:s}_end_{:s}.csv".format(LOCATION,END_DATE),index=False)
