@@ -13,6 +13,9 @@
 # recent target end dates
 # * results_path: a path to save the RCLP output
 
+
+library(lubridate)
+
 # tidyverse packages
 library(dplyr)
 library(tidyr)
@@ -49,11 +52,13 @@ source("./R/get_rclp_quantiles.R")
 
 # The reference_date is the date of the Saturday relative to which week-ahead
 # targets are defined.
-reference_date <- "2022-10-15" #args[1]
+reference_date <- "2022-10-22"#args[1]
 
 # rclp_method is the name of a class provided by the rclp module. Currently, one
 # of "EqualLP", "LP", or "BetaMixtureRCLP" (in increasing order of complexity)
 rclp_method <- "BetaMixtureRCLP" #args[2]
+
+#rclp_method <- "EqualLP" #args[2]
 
 # Number of components in beta mixture for recalibration
 K <- as.integer(5) #as.integer(args[3])
@@ -63,7 +68,7 @@ K <- as.integer(5) #as.integer(args[3])
 history_length <- "all" # args[4]
 
 # results_path is the location where the output should be saved
-results_path <- "./2022-10-17-LUcompUncertLab-ensemble_rclp.csv" #args[5]
+results_path <- "./2022-10-24-LUcompUncertLab-ensemble_rclp.csv" #args[5]
 
 # Get the list of required locations
 required_locations <-
@@ -72,6 +77,7 @@ required_locations <-
 
 # The forecast_date is the Monday of forecast creation.
 forecast_date <- as.character(as.Date(reference_date) + 2)
+print(forecast_date)
 
 # Load data
 weekly_data <- load_flu_hosp_data(
@@ -83,14 +89,16 @@ weekly_data <- load_flu_hosp_data(
 
 # Load component forecasts
 component_forecasts <- covidHubUtils::load_forecasts_repo(
-  file_path = paste0("component-forecasts/"),
-  forecast_dates = NULL,
+  file_path = paste0("./component-forecasts/"),
+  forecast_dates = seq(ymd('2022-03-14'),ymd('2022-10-24'), by = '1 week'),
   locations = NULL,
   types = "quantile",
   targets = NULL,
   hub = "FluSight",
   verbose = TRUE
-)
+  )
+
+print(component_forecasts)
 
 # training set forecasts -- those with a forecast date before the
 # current forecast date
@@ -136,6 +144,10 @@ if (rclp_method != "EqualLP") {
   # have the same set of models; check this here and error out if not
   train_models <- sort(unique(train_forecasts$model))
   current_models <- sort(unique(current_forecasts$model))
+
+    print(train_models)
+    print(current_models)
+
   if (!identical(train_models, current_models)) {
     stop("Require that the training set and current models are the same")
   }
