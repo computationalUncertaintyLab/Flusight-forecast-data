@@ -316,7 +316,7 @@ date,location,location_name,value
 2020-11-09,US,US,70
 2020-11-10,US,US,90
 2020-11-11,US,US,94
-2020-11-12,US,US,88
+2020-11-12,US,US,87
 2020-11-13,US,US,86
 2020-11-14,US,US,82
 2020-11-15,US,US,60
@@ -778,7 +778,7 @@ date,location,location_name,value
 2022-02-14,US,US,223
 2022-02-15,US,US,218
 2022-02-16,US,US,234
-2022-02-17,US,US,257
+2022-02-17,US,US,258
 2022-02-18,US,US,253
 2022-02-19,US,US,226
 2022-02-20,US,US,226
@@ -1011,21 +1011,28 @@ date,location,location_name,value
 2022-10-05,US,US,182
 2022-10-06,US,US,198
 2022-10-07,US,US,196
-2022-10-08,US,US,187
+2022-10-08,US,US,188
 2022-10-09,US,US,187
 2022-10-10,US,US,223
-2022-10-11,US,US,240
-2022-10-12,US,US,255
-2022-10-13,US,US,278
-2022-10-14,US,US,243
-2022-10-15,US,US,261
-2022-10-16,US,US,266
-2022-10-17,US,US,340
-2022-10-18,US,US,332
-2022-10-19,US,US,314
-2022-10-20,US,US,345
-2022-10-21,US,US,328
-2022-10-22,US,US,327
+2022-10-11,US,US,239
+2022-10-12,US,US,254
+2022-10-13,US,US,276
+2022-10-14,US,US,244
+2022-10-15,US,US,264
+2022-10-16,US,US,265
+2022-10-17,US,US,339
+2022-10-18,US,US,331
+2022-10-19,US,US,318
+2022-10-20,US,US,363
+2022-10-21,US,US,359
+2022-10-22,US,US,398
+2022-10-23,US,US,494
+2022-10-24,US,US,593
+2022-10-25,US,US,598
+2022-10-26,US,US,669
+2022-10-27,US,US,689
+2022-10-28,US,US,695
+2022-10-29,US,US,693
 2020-03-22,02,Alaska,NA
 2020-03-23,02,Alaska,NA
 2020-03-24,02,Alaska,NA
@@ -1969,8 +1976,15 @@ date,location,location_name,value
 2022-10-18,02,Alaska,0
 2022-10-19,02,Alaska,0
 2022-10-20,02,Alaska,1
-2022-10-21,02,Alaska,1
-2022-10-22,02,Alaska,1
+2022-10-21,02,Alaska,0
+2022-10-22,02,Alaska,2
+2022-10-23,02,Alaska,0
+2022-10-24,02,Alaska,1
+2022-10-25,02,Alaska,3
+2022-10-26,02,Alaska,3
+2022-10-27,02,Alaska,0
+2022-10-28,02,Alaska,0
+2022-10-29,02,Alaska,0
 2019-12-31,01,Alabama,NA
 2020-01-01,01,Alabama,NA
 2020-01-02,01,Alabama,NA
@@ -2995,9 +3009,16 @@ date,location,location_name,value
 2022-10-17,01,Alabama,25
 2022-10-18,01,Alabama,21
 2022-10-19,01,Alabama,20
-2022-10-20,01,Alabama,20
-2022-10-21,01,Alabama,20
-2022-10-22,01,Alabama,20
+2022-10-20,01,Alabama,19
+2022-10-21,01,Alabama,24
+2022-10-22,01,Alabama,22
+2022-10-23,01,Alabama,24
+2022-10-24,01,Alabama,35
+2022-10-25,01,Alabama,42
+2022-10-26,01,Alabama,41
+2022-10-27,01,Alabama,49
+2022-10-28,01,Alabama,49
+2022-10-29,01,Alabama,49
 2020-01-03,05,Arkansas,NA
 2020-01-04,05,Arkansas,NA
 2020-01-05,05,Arkansas,NA
@@ -3958,8 +3979,15 @@ date,location,location_name,value
 2022-10-18,05,Arkansas,6
 2022-10-19,05,Arkansas,9
 2022-10-20,05,Arkansas,6
-2022-10-21,05,Arkansas,7
-2022-10-22,05,Arkansas,7
+2022-10-21,05,Arkansas,8
+2022-10-22,05,Arkansas,6
+2022-10-23,05,Arkansas,18
+2022-10-24,05,Arkansas,7
+2022-10-25,05,Arkansas,14
+2022-10-26,05,Arkansas,9
+2022-10-27,05,Arkansas,12
+2022-10-28,05,Arkansas,13
+2022-10-29,05,Arkansas,13
 2020-03-01,04,Arizona,NA
 2020-03-02,04,Arizona,NA
 2020-03-03,04,Arizona,NA
@@ -4216,7 +4244,7 @@ date,location,location_name,value
 2020-11-09,04,Arizona,5
 2020-11-10,04,Arizona,3
 2020-11-11,04,Arizona,4
-2020-11-12,04,Arizona,5
+2020-11-12,04,Arizona,4
 2020-11-13,04,Arizona,3
 2020-11-14,04,Arizona,3
 2020-11-15,04,Arizona,3
@@ -4924,8 +4952,15 @@ date,location,location_name,value
 2022-10-18,04,Arizona,7
 2022-10-19,04,Arizona,2
 2022-10-20,04,Arizona,3
-2022-10-21,04,Arizona,3
-2022-10-22,04,Arizona,3
+2022-10-21,04,Arizona,2
+2022-10-22,04,Arizona,2
+2022-10-23,04,Arizona,2
+2022-10-24,04,Arizona,1
+2022-10-25,04,Arizona,3
+2022-10-26,04,Arizona,12
+2022-10-27,04,Arizona,15
+2022-10-28,04,Arizona,14
+2022-10-29,04,Arizona,14
 2020-02-03,06,California,NA
 2020-02-04,06,California,NA
 2020-02-05,06,California,NA
@@ -5896,8 +5931,15 @@ date,location,location_name,value
 2022-10-18,06,California,17
 2022-10-19,06,California,14
 2022-10-20,06,California,18
-2022-10-21,06,California,18
-2022-10-22,06,California,18
+2022-10-21,06,California,17
+2022-10-22,06,California,22
+2022-10-23,06,California,20
+2022-10-24,06,California,23
+2022-10-25,06,California,26
+2022-10-26,06,California,35
+2022-10-27,06,California,37
+2022-10-28,06,California,41
+2022-10-29,06,California,41
 2020-03-10,08,Colorado,NA
 2020-03-11,08,Colorado,NA
 2020-03-12,08,Colorado,NA
@@ -6850,8 +6892,15 @@ date,location,location_name,value
 2022-10-18,08,Colorado,1
 2022-10-19,08,Colorado,1
 2022-10-20,08,Colorado,3
-2022-10-21,08,Colorado,4
-2022-10-22,08,Colorado,4
+2022-10-21,08,Colorado,5
+2022-10-22,08,Colorado,3
+2022-10-23,08,Colorado,6
+2022-10-24,08,Colorado,4
+2022-10-25,08,Colorado,5
+2022-10-26,08,Colorado,1
+2022-10-27,08,Colorado,3
+2022-10-28,08,Colorado,5
+2022-10-29,08,Colorado,5
 2020-03-17,09,Connecticut,NA
 2020-03-18,09,Connecticut,NA
 2020-03-19,09,Connecticut,NA
@@ -7800,8 +7849,15 @@ date,location,location_name,value
 2022-10-18,09,Connecticut,1
 2022-10-19,09,Connecticut,2
 2022-10-20,09,Connecticut,2
-2022-10-21,09,Connecticut,2
+2022-10-21,09,Connecticut,0
 2022-10-22,09,Connecticut,2
+2022-10-23,09,Connecticut,2
+2022-10-24,09,Connecticut,3
+2022-10-25,09,Connecticut,4
+2022-10-26,09,Connecticut,6
+2022-10-27,09,Connecticut,18
+2022-10-28,09,Connecticut,18
+2022-10-29,09,Connecticut,18
 2020-03-27,11,District of Columbia,NA
 2020-03-28,11,District of Columbia,NA
 2020-03-29,11,District of Columbia,NA
@@ -8741,7 +8797,14 @@ date,location,location_name,value
 2022-10-19,11,District of Columbia,2
 2022-10-20,11,District of Columbia,0
 2022-10-21,11,District of Columbia,0
-2022-10-22,11,District of Columbia,0
+2022-10-22,11,District of Columbia,3
+2022-10-23,11,District of Columbia,3
+2022-10-24,11,District of Columbia,2
+2022-10-25,11,District of Columbia,2
+2022-10-26,11,District of Columbia,0
+2022-10-27,11,District of Columbia,0
+2022-10-28,11,District of Columbia,2
+2022-10-29,11,District of Columbia,2
 2020-03-26,10,Delaware,NA
 2020-03-27,10,Delaware,NA
 2020-03-28,10,Delaware,NA
@@ -9680,9 +9743,16 @@ date,location,location_name,value
 2022-10-17,10,Delaware,0
 2022-10-18,10,Delaware,0
 2022-10-19,10,Delaware,0
-2022-10-20,10,Delaware,0
+2022-10-20,10,Delaware,1
 2022-10-21,10,Delaware,0
 2022-10-22,10,Delaware,0
+2022-10-23,10,Delaware,0
+2022-10-24,10,Delaware,2
+2022-10-25,10,Delaware,1
+2022-10-26,10,Delaware,1
+2022-10-27,10,Delaware,2
+2022-10-28,10,Delaware,1
+2022-10-29,10,Delaware,1
 2020-03-11,12,Florida,NA
 2020-03-12,12,Florida,NA
 2020-03-13,12,Florida,NA
@@ -10636,9 +10706,16 @@ date,location,location_name,value
 2022-10-17,12,Florida,20
 2022-10-18,12,Florida,13
 2022-10-19,12,Florida,26
-2022-10-20,12,Florida,21
-2022-10-21,12,Florida,22
-2022-10-22,12,Florida,22
+2022-10-20,12,Florida,23
+2022-10-21,12,Florida,14
+2022-10-22,12,Florida,15
+2022-10-23,12,Florida,28
+2022-10-24,12,Florida,34
+2022-10-25,12,Florida,39
+2022-10-26,12,Florida,46
+2022-10-27,12,Florida,42
+2022-10-28,12,Florida,40
+2022-10-29,12,Florida,40
 2020-02-29,13,Georgia,NA
 2020-03-01,13,Georgia,NA
 2020-03-02,13,Georgia,NA
@@ -11604,8 +11681,15 @@ date,location,location_name,value
 2022-10-18,13,Georgia,10
 2022-10-19,13,Georgia,18
 2022-10-20,13,Georgia,17
-2022-10-21,13,Georgia,20
-2022-10-22,13,Georgia,20
+2022-10-21,13,Georgia,19
+2022-10-22,13,Georgia,18
+2022-10-23,13,Georgia,22
+2022-10-24,13,Georgia,34
+2022-10-25,13,Georgia,19
+2022-10-26,13,Georgia,34
+2022-10-27,13,Georgia,24
+2022-10-28,13,Georgia,26
+2022-10-29,13,Georgia,26
 2019-12-31,15,Hawaii,NA
 2020-01-01,15,Hawaii,NA
 2020-01-02,15,Hawaii,NA
@@ -12633,6 +12717,13 @@ date,location,location_name,value
 2022-10-20,15,Hawaii,0
 2022-10-21,15,Hawaii,1
 2022-10-22,15,Hawaii,1
+2022-10-23,15,Hawaii,1
+2022-10-24,15,Hawaii,1
+2022-10-25,15,Hawaii,0
+2022-10-26,15,Hawaii,2
+2022-10-27,15,Hawaii,1
+2022-10-28,15,Hawaii,2
+2022-10-29,15,Hawaii,2
 2020-02-29,19,Iowa,NA
 2020-03-01,19,Iowa,NA
 2020-03-02,19,Iowa,NA
@@ -13598,8 +13689,15 @@ date,location,location_name,value
 2022-10-18,19,Iowa,2
 2022-10-19,19,Iowa,1
 2022-10-20,19,Iowa,2
-2022-10-21,19,Iowa,2
-2022-10-22,19,Iowa,2
+2022-10-21,19,Iowa,1
+2022-10-22,19,Iowa,1
+2022-10-23,19,Iowa,1
+2022-10-24,19,Iowa,2
+2022-10-25,19,Iowa,4
+2022-10-26,19,Iowa,3
+2022-10-27,19,Iowa,3
+2022-10-28,19,Iowa,3
+2022-10-29,19,Iowa,3
 2020-03-12,16,Idaho,NA
 2020-03-13,16,Idaho,NA
 2020-03-14,16,Idaho,NA
@@ -14555,6 +14653,13 @@ date,location,location_name,value
 2022-10-20,16,Idaho,1
 2022-10-21,16,Idaho,0
 2022-10-22,16,Idaho,0
+2022-10-23,16,Idaho,1
+2022-10-24,16,Idaho,0
+2022-10-25,16,Idaho,0
+2022-10-26,16,Idaho,0
+2022-10-27,16,Idaho,0
+2022-10-28,16,Idaho,0
+2022-10-29,16,Idaho,0
 2020-02-17,17,Illinois,NA
 2020-02-18,17,Illinois,NA
 2020-02-19,17,Illinois,NA
@@ -15525,15 +15630,22 @@ date,location,location_name,value
 2022-10-11,17,Illinois,4
 2022-10-12,17,Illinois,5
 2022-10-13,17,Illinois,5
-2022-10-14,17,Illinois,2
-2022-10-15,17,Illinois,4
+2022-10-14,17,Illinois,3
+2022-10-15,17,Illinois,5
 2022-10-16,17,Illinois,4
 2022-10-17,17,Illinois,2
 2022-10-18,17,Illinois,8
 2022-10-19,17,Illinois,5
 2022-10-20,17,Illinois,8
-2022-10-21,17,Illinois,6
-2022-10-22,17,Illinois,6
+2022-10-21,17,Illinois,7
+2022-10-22,17,Illinois,11
+2022-10-23,17,Illinois,16
+2022-10-24,17,Illinois,20
+2022-10-25,17,Illinois,19
+2022-10-26,17,Illinois,14
+2022-10-27,17,Illinois,11
+2022-10-28,17,Illinois,15
+2022-10-29,17,Illinois,15
 2019-12-31,18,Indiana,NA
 2020-01-01,18,Indiana,NA
 2020-01-02,18,Indiana,NA
@@ -16559,8 +16671,15 @@ date,location,location_name,value
 2022-10-18,18,Indiana,11
 2022-10-19,18,Indiana,11
 2022-10-20,18,Indiana,13
-2022-10-21,18,Indiana,12
-2022-10-22,18,Indiana,12
+2022-10-21,18,Indiana,11
+2022-10-22,18,Indiana,10
+2022-10-23,18,Indiana,12
+2022-10-24,18,Indiana,20
+2022-10-25,18,Indiana,9
+2022-10-26,18,Indiana,17
+2022-10-27,18,Indiana,20
+2022-10-28,18,Indiana,15
+2022-10-29,18,Indiana,15
 2020-01-31,20,Kansas,NA
 2020-02-01,20,Kansas,NA
 2020-02-02,20,Kansas,NA
@@ -17554,9 +17673,16 @@ date,location,location_name,value
 2022-10-17,20,Kansas,1
 2022-10-18,20,Kansas,2
 2022-10-19,20,Kansas,2
-2022-10-20,20,Kansas,1
-2022-10-21,20,Kansas,0
-2022-10-22,20,Kansas,0
+2022-10-20,20,Kansas,2
+2022-10-21,20,Kansas,6
+2022-10-22,20,Kansas,2
+2022-10-23,20,Kansas,2
+2022-10-24,20,Kansas,6
+2022-10-25,20,Kansas,5
+2022-10-26,20,Kansas,2
+2022-10-27,20,Kansas,1
+2022-10-28,20,Kansas,2
+2022-10-29,20,Kansas,2
 2020-02-29,21,Kentucky,NA
 2020-03-01,21,Kentucky,NA
 2020-03-02,21,Kentucky,NA
@@ -18523,7 +18649,14 @@ date,location,location_name,value
 2022-10-19,21,Kentucky,1
 2022-10-20,21,Kentucky,2
 2022-10-21,21,Kentucky,1
-2022-10-22,21,Kentucky,1
+2022-10-22,21,Kentucky,5
+2022-10-23,21,Kentucky,8
+2022-10-24,21,Kentucky,10
+2022-10-25,21,Kentucky,6
+2022-10-26,21,Kentucky,9
+2022-10-27,21,Kentucky,14
+2022-10-28,21,Kentucky,12
+2022-10-29,21,Kentucky,12
 2019-12-31,22,Louisiana,NA
 2020-01-01,22,Louisiana,NA
 2020-01-02,22,Louisiana,NA
@@ -19495,7 +19628,14 @@ date,location,location_name,value
 2022-10-19,22,Louisiana,13
 2022-10-20,22,Louisiana,7
 2022-10-21,22,Louisiana,11
-2022-10-22,22,Louisiana,11
+2022-10-22,22,Louisiana,19
+2022-10-23,22,Louisiana,23
+2022-10-24,22,Louisiana,31
+2022-10-25,22,Louisiana,29
+2022-10-26,22,Louisiana,22
+2022-10-27,22,Louisiana,20
+2022-10-28,22,Louisiana,32
+2022-10-29,22,Louisiana,32
 2020-03-26,25,Massachusetts,NA
 2020-03-27,25,Massachusetts,NA
 2020-03-28,25,Massachusetts,NA
@@ -20435,8 +20575,15 @@ date,location,location_name,value
 2022-10-18,25,Massachusetts,3
 2022-10-19,25,Massachusetts,1
 2022-10-20,25,Massachusetts,0
-2022-10-21,25,Massachusetts,0
-2022-10-22,25,Massachusetts,0
+2022-10-21,25,Massachusetts,2
+2022-10-22,25,Massachusetts,1
+2022-10-23,25,Massachusetts,0
+2022-10-24,25,Massachusetts,1
+2022-10-25,25,Massachusetts,4
+2022-10-26,25,Massachusetts,4
+2022-10-27,25,Massachusetts,4
+2022-10-28,25,Massachusetts,4
+2022-10-29,25,Massachusetts,4
 2020-02-29,24,Maryland,NA
 2020-03-01,24,Maryland,NA
 2020-03-02,24,Maryland,NA
@@ -21156,7 +21303,7 @@ date,location,location_name,value
 2022-02-14,24,Maryland,1
 2022-02-15,24,Maryland,1
 2022-02-16,24,Maryland,5
-2022-02-17,24,Maryland,1
+2022-02-17,24,Maryland,2
 2022-02-18,24,Maryland,4
 2022-02-19,24,Maryland,2
 2022-02-20,24,Maryland,0
@@ -21397,13 +21544,20 @@ date,location,location_name,value
 2022-10-13,24,Maryland,1
 2022-10-14,24,Maryland,6
 2022-10-15,24,Maryland,4
-2022-10-16,24,Maryland,3
+2022-10-16,24,Maryland,4
 2022-10-17,24,Maryland,9
 2022-10-18,24,Maryland,7
 2022-10-19,24,Maryland,12
-2022-10-20,24,Maryland,5
-2022-10-21,24,Maryland,5
-2022-10-22,24,Maryland,4
+2022-10-20,24,Maryland,6
+2022-10-21,24,Maryland,2
+2022-10-22,24,Maryland,9
+2022-10-23,24,Maryland,8
+2022-10-24,24,Maryland,11
+2022-10-25,24,Maryland,10
+2022-10-26,24,Maryland,20
+2022-10-27,24,Maryland,20
+2022-10-28,24,Maryland,13
+2022-10-29,24,Maryland,13
 2020-02-29,23,Maine,NA
 2020-03-01,23,Maine,NA
 2020-03-02,23,Maine,NA
@@ -22371,6 +22525,13 @@ date,location,location_name,value
 2022-10-20,23,Maine,0
 2022-10-21,23,Maine,0
 2022-10-22,23,Maine,0
+2022-10-23,23,Maine,0
+2022-10-24,23,Maine,0
+2022-10-25,23,Maine,2
+2022-10-26,23,Maine,1
+2022-10-27,23,Maine,0
+2022-10-28,23,Maine,0
+2022-10-29,23,Maine,0
 2020-02-29,26,Michigan,NA
 2020-03-01,26,Michigan,NA
 2020-03-02,26,Michigan,NA
@@ -23337,7 +23498,14 @@ date,location,location_name,value
 2022-10-19,26,Michigan,2
 2022-10-20,26,Michigan,3
 2022-10-21,26,Michigan,1
-2022-10-22,26,Michigan,1
+2022-10-22,26,Michigan,5
+2022-10-23,26,Michigan,5
+2022-10-24,26,Michigan,10
+2022-10-25,26,Michigan,12
+2022-10-26,26,Michigan,5
+2022-10-27,26,Michigan,5
+2022-10-28,26,Michigan,8
+2022-10-29,26,Michigan,8
 2019-12-31,27,Minnesota,NA
 2020-01-01,27,Minnesota,NA
 2020-01-02,27,Minnesota,NA
@@ -24365,6 +24533,13 @@ date,location,location_name,value
 2022-10-20,27,Minnesota,1
 2022-10-21,27,Minnesota,1
 2022-10-22,27,Minnesota,1
+2022-10-23,27,Minnesota,4
+2022-10-24,27,Minnesota,5
+2022-10-25,27,Minnesota,7
+2022-10-26,27,Minnesota,5
+2022-10-27,27,Minnesota,3
+2022-10-28,27,Minnesota,3
+2022-10-29,27,Minnesota,3
 2020-02-22,29,Missouri,NA
 2020-02-23,29,Missouri,NA
 2020-02-24,29,Missouri,NA
@@ -25335,10 +25510,17 @@ date,location,location_name,value
 2022-10-16,29,Missouri,1
 2022-10-17,29,Missouri,1
 2022-10-18,29,Missouri,4
-2022-10-19,29,Missouri,3
-2022-10-20,29,Missouri,5
-2022-10-21,29,Missouri,6
-2022-10-22,29,Missouri,6
+2022-10-19,29,Missouri,4
+2022-10-20,29,Missouri,6
+2022-10-21,29,Missouri,3
+2022-10-22,29,Missouri,4
+2022-10-23,29,Missouri,6
+2022-10-24,29,Missouri,11
+2022-10-25,29,Missouri,9
+2022-10-26,29,Missouri,5
+2022-10-27,29,Missouri,6
+2022-10-28,29,Missouri,4
+2022-10-29,29,Missouri,4
 2020-02-17,28,Mississippi,NA
 2020-02-18,28,Mississippi,NA
 2020-02-19,28,Mississippi,NA
@@ -26314,9 +26496,16 @@ date,location,location_name,value
 2022-10-17,28,Mississippi,11
 2022-10-18,28,Mississippi,14
 2022-10-19,28,Mississippi,10
-2022-10-20,28,Mississippi,15
-2022-10-21,28,Mississippi,13
-2022-10-22,28,Mississippi,13
+2022-10-20,28,Mississippi,16
+2022-10-21,28,Mississippi,15
+2022-10-22,28,Mississippi,11
+2022-10-23,28,Mississippi,15
+2022-10-24,28,Mississippi,23
+2022-10-25,28,Mississippi,24
+2022-10-26,28,Mississippi,34
+2022-10-27,28,Mississippi,24
+2022-10-28,28,Mississippi,19
+2022-10-29,28,Mississippi,17
 2019-12-31,30,Montana,NA
 2020-01-01,30,Montana,NA
 2020-01-02,30,Montana,NA
@@ -27344,6 +27533,13 @@ date,location,location_name,value
 2022-10-20,30,Montana,0
 2022-10-21,30,Montana,0
 2022-10-22,30,Montana,0
+2022-10-23,30,Montana,0
+2022-10-24,30,Montana,1
+2022-10-25,30,Montana,0
+2022-10-26,30,Montana,0
+2022-10-27,30,Montana,1
+2022-10-28,30,Montana,1
+2022-10-29,30,Montana,1
 2019-12-31,37,North Carolina,NA
 2020-01-01,37,North Carolina,NA
 2020-01-02,37,North Carolina,NA
@@ -28368,9 +28564,16 @@ date,location,location_name,value
 2022-10-17,37,North Carolina,6
 2022-10-18,37,North Carolina,9
 2022-10-19,37,North Carolina,13
-2022-10-20,37,North Carolina,14
-2022-10-21,37,North Carolina,14
-2022-10-22,37,North Carolina,14
+2022-10-20,37,North Carolina,10
+2022-10-21,37,North Carolina,15
+2022-10-22,37,North Carolina,11
+2022-10-23,37,North Carolina,14
+2022-10-24,37,North Carolina,27
+2022-10-25,37,North Carolina,27
+2022-10-26,37,North Carolina,41
+2022-10-27,37,North Carolina,45
+2022-10-28,37,North Carolina,44
+2022-10-29,37,North Carolina,44
 2020-02-29,38,North Dakota,NA
 2020-03-01,38,North Dakota,NA
 2020-03-02,38,North Dakota,NA
@@ -29338,6 +29541,13 @@ date,location,location_name,value
 2022-10-20,38,North Dakota,1
 2022-10-21,38,North Dakota,0
 2022-10-22,38,North Dakota,0
+2022-10-23,38,North Dakota,0
+2022-10-24,38,North Dakota,0
+2022-10-25,38,North Dakota,0
+2022-10-26,38,North Dakota,1
+2022-10-27,38,North Dakota,0
+2022-10-28,38,North Dakota,0
+2022-10-29,38,North Dakota,0
 2020-02-29,31,Nebraska,NA
 2020-03-01,31,Nebraska,NA
 2020-03-02,31,Nebraska,NA
@@ -30303,8 +30513,15 @@ date,location,location_name,value
 2022-10-18,31,Nebraska,2
 2022-10-19,31,Nebraska,0
 2022-10-20,31,Nebraska,1
-2022-10-21,31,Nebraska,1
-2022-10-22,31,Nebraska,1
+2022-10-21,31,Nebraska,4
+2022-10-22,31,Nebraska,2
+2022-10-23,31,Nebraska,1
+2022-10-24,31,Nebraska,2
+2022-10-25,31,Nebraska,2
+2022-10-26,31,Nebraska,3
+2022-10-27,31,Nebraska,1
+2022-10-28,31,Nebraska,2
+2022-10-29,31,Nebraska,2
 2020-03-26,33,New Hampshire,NA
 2020-03-27,33,New Hampshire,NA
 2020-03-28,33,New Hampshire,NA
@@ -31246,6 +31463,13 @@ date,location,location_name,value
 2022-10-20,33,New Hampshire,0
 2022-10-21,33,New Hampshire,0
 2022-10-22,33,New Hampshire,0
+2022-10-23,33,New Hampshire,0
+2022-10-24,33,New Hampshire,0
+2022-10-25,33,New Hampshire,0
+2022-10-26,33,New Hampshire,0
+2022-10-27,33,New Hampshire,0
+2022-10-28,33,New Hampshire,0
+2022-10-29,33,New Hampshire,0
 2020-02-29,34,New Jersey,NA
 2020-03-01,34,New Jersey,NA
 2020-03-02,34,New Jersey,NA
@@ -32211,8 +32435,15 @@ date,location,location_name,value
 2022-10-18,34,New Jersey,3
 2022-10-19,34,New Jersey,6
 2022-10-20,34,New Jersey,9
-2022-10-21,34,New Jersey,1
+2022-10-21,34,New Jersey,2
 2022-10-22,34,New Jersey,1
+2022-10-23,34,New Jersey,9
+2022-10-24,34,New Jersey,10
+2022-10-25,34,New Jersey,15
+2022-10-26,34,New Jersey,10
+2022-10-27,34,New Jersey,11
+2022-10-28,34,New Jersey,10
+2022-10-29,34,New Jersey,10
 2020-03-13,35,New Mexico,NA
 2020-03-14,35,New Mexico,NA
 2020-03-15,35,New Mexico,NA
@@ -33155,18 +33386,25 @@ date,location,location_name,value
 2022-10-08,35,New Mexico,3
 2022-10-09,35,New Mexico,2
 2022-10-10,35,New Mexico,4
-2022-10-11,35,New Mexico,7
-2022-10-12,35,New Mexico,6
-2022-10-13,35,New Mexico,4
-2022-10-14,35,New Mexico,3
-2022-10-15,35,New Mexico,2
-2022-10-16,35,New Mexico,7
+2022-10-11,35,New Mexico,6
+2022-10-12,35,New Mexico,5
+2022-10-13,35,New Mexico,2
+2022-10-14,35,New Mexico,2
+2022-10-15,35,New Mexico,1
+2022-10-16,35,New Mexico,6
 2022-10-17,35,New Mexico,4
-2022-10-18,35,New Mexico,3
-2022-10-19,35,New Mexico,5
-2022-10-20,35,New Mexico,10
+2022-10-18,35,New Mexico,2
+2022-10-19,35,New Mexico,4
+2022-10-20,35,New Mexico,7
 2022-10-21,35,New Mexico,2
-2022-10-22,35,New Mexico,2
+2022-10-22,35,New Mexico,4
+2022-10-23,35,New Mexico,4
+2022-10-24,35,New Mexico,7
+2022-10-25,35,New Mexico,8
+2022-10-26,35,New Mexico,9
+2022-10-27,35,New Mexico,11
+2022-10-28,35,New Mexico,10
+2022-10-29,35,New Mexico,10
 2020-01-01,32,Nevada,1
 2020-01-02,32,Nevada,1
 2020-01-03,32,Nevada,1
@@ -34173,9 +34411,16 @@ date,location,location_name,value
 2022-10-17,32,Nevada,2
 2022-10-18,32,Nevada,3
 2022-10-19,32,Nevada,1
-2022-10-20,32,Nevada,1
-2022-10-21,32,Nevada,1
+2022-10-20,32,Nevada,3
+2022-10-21,32,Nevada,0
 2022-10-22,32,Nevada,1
+2022-10-23,32,Nevada,1
+2022-10-24,32,Nevada,4
+2022-10-25,32,Nevada,2
+2022-10-26,32,Nevada,2
+2022-10-27,32,Nevada,2
+2022-10-28,32,Nevada,2
+2022-10-29,32,Nevada,2
 2020-03-13,36,New York,NA
 2020-03-14,36,New York,NA
 2020-03-15,36,New York,NA
@@ -35128,8 +35373,15 @@ date,location,location_name,value
 2022-10-18,36,New York,7
 2022-10-19,36,New York,8
 2022-10-20,36,New York,5
-2022-10-21,36,New York,5
-2022-10-22,36,New York,5
+2022-10-21,36,New York,7
+2022-10-22,36,New York,10
+2022-10-23,36,New York,12
+2022-10-24,36,New York,17
+2022-10-25,36,New York,16
+2022-10-26,36,New York,15
+2022-10-27,36,New York,17
+2022-10-28,36,New York,15
+2022-10-29,36,New York,15
 2020-02-29,39,Ohio,NA
 2020-03-01,39,Ohio,NA
 2020-03-02,39,Ohio,NA
@@ -36082,21 +36334,28 @@ date,location,location_name,value
 2022-10-05,39,Ohio,4
 2022-10-06,39,Ohio,1
 2022-10-07,39,Ohio,2
-2022-10-08,39,Ohio,2
+2022-10-08,39,Ohio,3
 2022-10-09,39,Ohio,5
 2022-10-10,39,Ohio,5
 2022-10-11,39,Ohio,5
 2022-10-12,39,Ohio,8
 2022-10-13,39,Ohio,4
-2022-10-14,39,Ohio,1
-2022-10-15,39,Ohio,2
+2022-10-14,39,Ohio,2
+2022-10-15,39,Ohio,3
 2022-10-16,39,Ohio,1
 2022-10-17,39,Ohio,6
 2022-10-18,39,Ohio,4
 2022-10-19,39,Ohio,2
-2022-10-20,39,Ohio,8
+2022-10-20,39,Ohio,9
 2022-10-21,39,Ohio,9
-2022-10-22,39,Ohio,9
+2022-10-22,39,Ohio,8
+2022-10-23,39,Ohio,14
+2022-10-24,39,Ohio,28
+2022-10-25,39,Ohio,16
+2022-10-26,39,Ohio,14
+2022-10-27,39,Ohio,14
+2022-10-28,39,Ohio,15
+2022-10-29,39,Ohio,15
 2020-02-29,40,Oklahoma,NA
 2020-03-01,40,Oklahoma,NA
 2020-03-02,40,Oklahoma,NA
@@ -37062,8 +37321,15 @@ date,location,location_name,value
 2022-10-18,40,Oklahoma,3
 2022-10-19,40,Oklahoma,3
 2022-10-20,40,Oklahoma,7
-2022-10-21,40,Oklahoma,8
+2022-10-21,40,Oklahoma,7
 2022-10-22,40,Oklahoma,8
+2022-10-23,40,Oklahoma,10
+2022-10-24,40,Oklahoma,9
+2022-10-25,40,Oklahoma,7
+2022-10-26,40,Oklahoma,11
+2022-10-27,40,Oklahoma,10
+2022-10-28,40,Oklahoma,9
+2022-10-29,40,Oklahoma,9
 2020-02-23,41,Oregon,NA
 2020-02-24,41,Oregon,NA
 2020-02-25,41,Oregon,NA
@@ -38036,7 +38302,14 @@ date,location,location_name,value
 2022-10-19,41,Oregon,1
 2022-10-20,41,Oregon,1
 2022-10-21,41,Oregon,1
-2022-10-22,41,Oregon,1
+2022-10-22,41,Oregon,0
+2022-10-23,41,Oregon,0
+2022-10-24,41,Oregon,1
+2022-10-25,41,Oregon,0
+2022-10-26,41,Oregon,0
+2022-10-27,41,Oregon,2
+2022-10-28,41,Oregon,1
+2022-10-29,41,Oregon,1
 2020-02-29,42,Pennsylvania,NA
 2020-03-01,42,Pennsylvania,NA
 2020-03-02,42,Pennsylvania,NA
@@ -39002,8 +39275,15 @@ date,location,location_name,value
 2022-10-18,42,Pennsylvania,19
 2022-10-19,42,Pennsylvania,11
 2022-10-20,42,Pennsylvania,13
-2022-10-21,42,Pennsylvania,15
-2022-10-22,42,Pennsylvania,15
+2022-10-21,42,Pennsylvania,16
+2022-10-22,42,Pennsylvania,17
+2022-10-23,42,Pennsylvania,26
+2022-10-24,42,Pennsylvania,26
+2022-10-25,42,Pennsylvania,18
+2022-10-26,42,Pennsylvania,26
+2022-10-27,42,Pennsylvania,39
+2022-10-28,42,Pennsylvania,27
+2022-10-29,42,Pennsylvania,27
 2019-12-31,72,Puerto Rico,NA
 2020-01-01,72,Puerto Rico,NA
 2020-01-02,72,Puerto Rico,NA
@@ -39968,14 +40248,21 @@ date,location,location_name,value
 2022-10-12,72,Puerto Rico,7
 2022-10-13,72,Puerto Rico,21
 2022-10-14,72,Puerto Rico,5
-2022-10-15,72,Puerto Rico,5
+2022-10-15,72,Puerto Rico,7
 2022-10-16,72,Puerto Rico,4
 2022-10-17,72,Puerto Rico,8
 2022-10-18,72,Puerto Rico,8
-2022-10-19,72,Puerto Rico,5
+2022-10-19,72,Puerto Rico,6
 2022-10-20,72,Puerto Rico,12
-2022-10-21,72,Puerto Rico,12
-2022-10-22,72,Puerto Rico,12
+2022-10-21,72,Puerto Rico,9
+2022-10-22,72,Puerto Rico,7
+2022-10-23,72,Puerto Rico,9
+2022-10-24,72,Puerto Rico,9
+2022-10-25,72,Puerto Rico,14
+2022-10-26,72,Puerto Rico,10
+2022-10-27,72,Puerto Rico,11
+2022-10-28,72,Puerto Rico,11
+2022-10-29,72,Puerto Rico,11
 2020-03-02,44,Rhode Island,NA
 2020-03-03,44,Rhode Island,NA
 2020-03-04,44,Rhode Island,NA
@@ -40941,6 +41228,13 @@ date,location,location_name,value
 2022-10-20,44,Rhode Island,0
 2022-10-21,44,Rhode Island,0
 2022-10-22,44,Rhode Island,0
+2022-10-23,44,Rhode Island,0
+2022-10-24,44,Rhode Island,0
+2022-10-25,44,Rhode Island,0
+2022-10-26,44,Rhode Island,0
+2022-10-27,44,Rhode Island,0
+2022-10-28,44,Rhode Island,0
+2022-10-29,44,Rhode Island,0
 2020-03-01,45,South Carolina,NA
 2020-03-02,45,South Carolina,NA
 2020-03-03,45,South Carolina,NA
@@ -41904,9 +42198,16 @@ date,location,location_name,value
 2022-10-17,45,South Carolina,18
 2022-10-18,45,South Carolina,13
 2022-10-19,45,South Carolina,9
-2022-10-20,45,South Carolina,9
+2022-10-20,45,South Carolina,10
 2022-10-21,45,South Carolina,9
-2022-10-22,45,South Carolina,9
+2022-10-22,45,South Carolina,21
+2022-10-23,45,South Carolina,11
+2022-10-24,45,South Carolina,9
+2022-10-25,45,South Carolina,22
+2022-10-26,45,South Carolina,29
+2022-10-27,45,South Carolina,24
+2022-10-28,45,South Carolina,37
+2022-10-29,45,South Carolina,37
 2020-03-24,46,South Dakota,NA
 2020-03-25,46,South Dakota,NA
 2020-03-26,46,South Dakota,NA
@@ -42848,8 +43149,15 @@ date,location,location_name,value
 2022-10-18,46,South Dakota,2
 2022-10-19,46,South Dakota,2
 2022-10-20,46,South Dakota,2
-2022-10-21,46,South Dakota,2
-2022-10-22,46,South Dakota,2
+2022-10-21,46,South Dakota,1
+2022-10-22,46,South Dakota,1
+2022-10-23,46,South Dakota,2
+2022-10-24,46,South Dakota,1
+2022-10-25,46,South Dakota,1
+2022-10-26,46,South Dakota,2
+2022-10-27,46,South Dakota,1
+2022-10-28,46,South Dakota,1
+2022-10-29,46,South Dakota,1
 2020-03-13,47,Tennessee,NA
 2020-03-14,47,Tennessee,NA
 2020-03-15,47,Tennessee,NA
@@ -43799,11 +44107,18 @@ date,location,location_name,value
 2022-10-15,47,Tennessee,7
 2022-10-16,47,Tennessee,8
 2022-10-17,47,Tennessee,9
-2022-10-18,47,Tennessee,20
-2022-10-19,47,Tennessee,11
-2022-10-20,47,Tennessee,11
-2022-10-21,47,Tennessee,12
+2022-10-18,47,Tennessee,21
+2022-10-19,47,Tennessee,12
+2022-10-20,47,Tennessee,13
+2022-10-21,47,Tennessee,19
 2022-10-22,47,Tennessee,12
+2022-10-23,47,Tennessee,19
+2022-10-24,47,Tennessee,15
+2022-10-25,47,Tennessee,15
+2022-10-26,47,Tennessee,29
+2022-10-27,47,Tennessee,25
+2022-10-28,47,Tennessee,23
+2022-10-29,47,Tennessee,23
 2019-12-31,48,Texas,NA
 2020-01-01,48,Texas,NA
 2020-01-02,48,Texas,NA
@@ -44828,9 +45143,16 @@ date,location,location_name,value
 2022-10-17,48,Texas,69
 2022-10-18,48,Texas,60
 2022-10-19,48,Texas,62
-2022-10-20,48,Texas,63
-2022-10-21,48,Texas,57
-2022-10-22,48,Texas,57
+2022-10-20,48,Texas,74
+2022-10-21,48,Texas,93
+2022-10-22,48,Texas,87
+2022-10-23,48,Texas,104
+2022-10-24,48,Texas,87
+2022-10-25,48,Texas,90
+2022-10-26,48,Texas,95
+2022-10-27,48,Texas,108
+2022-10-28,48,Texas,105
+2022-10-29,48,Texas,105
 2020-03-13,49,Utah,NA
 2020-03-14,49,Utah,NA
 2020-03-15,49,Utah,NA
@@ -45779,6 +46101,13 @@ date,location,location_name,value
 2022-10-20,49,Utah,0
 2022-10-21,49,Utah,2
 2022-10-22,49,Utah,2
+2022-10-23,49,Utah,1
+2022-10-24,49,Utah,1
+2022-10-25,49,Utah,4
+2022-10-26,49,Utah,1
+2022-10-27,49,Utah,0
+2022-10-28,49,Utah,3
+2022-10-29,49,Utah,3
 2020-03-01,51,Virginia,NA
 2020-03-02,51,Virginia,NA
 2020-03-03,51,Virginia,NA
@@ -46738,13 +47067,20 @@ date,location,location_name,value
 2022-10-13,51,Virginia,3
 2022-10-14,51,Virginia,5
 2022-10-15,51,Virginia,7
-2022-10-16,51,Virginia,11
-2022-10-17,51,Virginia,15
-2022-10-18,51,Virginia,14
-2022-10-19,51,Virginia,9
+2022-10-16,51,Virginia,10
+2022-10-17,51,Virginia,14
+2022-10-18,51,Virginia,13
+2022-10-19,51,Virginia,11
 2022-10-20,51,Virginia,16
-2022-10-21,51,Virginia,12
-2022-10-22,51,Virginia,12
+2022-10-21,51,Virginia,5
+2022-10-22,51,Virginia,17
+2022-10-23,51,Virginia,16
+2022-10-24,51,Virginia,26
+2022-10-25,51,Virginia,30
+2022-10-26,51,Virginia,20
+2022-10-27,51,Virginia,19
+2022-10-28,51,Virginia,25
+2022-10-29,51,Virginia,25
 2020-04-07,78,Virgin Islands,NA
 2020-04-08,78,Virgin Islands,NA
 2020-04-09,78,Virgin Islands,NA
@@ -47674,6 +48010,13 @@ date,location,location_name,value
 2022-10-20,78,Virgin Islands,0
 2022-10-21,78,Virgin Islands,0
 2022-10-22,78,Virgin Islands,0
+2022-10-23,78,Virgin Islands,0
+2022-10-24,78,Virgin Islands,0
+2022-10-25,78,Virgin Islands,0
+2022-10-26,78,Virgin Islands,0
+2022-10-27,78,Virgin Islands,0
+2022-10-28,78,Virgin Islands,0
+2022-10-29,78,Virgin Islands,0
 2020-03-16,50,Vermont,NA
 2020-03-17,50,Vermont,NA
 2020-03-18,50,Vermont,NA
@@ -48625,6 +48968,13 @@ date,location,location_name,value
 2022-10-20,50,Vermont,0
 2022-10-21,50,Vermont,0
 2022-10-22,50,Vermont,0
+2022-10-23,50,Vermont,0
+2022-10-24,50,Vermont,0
+2022-10-25,50,Vermont,0
+2022-10-26,50,Vermont,0
+2022-10-27,50,Vermont,0
+2022-10-28,50,Vermont,0
+2022-10-29,50,Vermont,0
 2020-02-27,53,Washington,NA
 2020-02-28,53,Washington,NA
 2020-02-29,53,Washington,NA
@@ -49591,9 +49941,16 @@ date,location,location_name,value
 2022-10-17,53,Washington,2
 2022-10-18,53,Washington,2
 2022-10-19,53,Washington,4
-2022-10-20,53,Washington,3
-2022-10-21,53,Washington,3
-2022-10-22,53,Washington,3
+2022-10-20,53,Washington,5
+2022-10-21,53,Washington,2
+2022-10-22,53,Washington,5
+2022-10-23,53,Washington,4
+2022-10-24,53,Washington,5
+2022-10-25,53,Washington,5
+2022-10-26,53,Washington,6
+2022-10-27,53,Washington,5
+2022-10-28,53,Washington,5
+2022-10-29,53,Washington,5
 2020-02-29,55,Wisconsin,NA
 2020-03-01,55,Wisconsin,NA
 2020-03-02,55,Wisconsin,NA
@@ -50559,8 +50916,15 @@ date,location,location_name,value
 2022-10-18,55,Wisconsin,0
 2022-10-19,55,Wisconsin,1
 2022-10-20,55,Wisconsin,0
-2022-10-21,55,Wisconsin,1
+2022-10-21,55,Wisconsin,3
 2022-10-22,55,Wisconsin,1
+2022-10-23,55,Wisconsin,0
+2022-10-24,55,Wisconsin,2
+2022-10-25,55,Wisconsin,1
+2022-10-26,55,Wisconsin,5
+2022-10-27,55,Wisconsin,3
+2022-10-28,55,Wisconsin,2
+2022-10-29,55,Wisconsin,2
 2020-01-27,54,West Virginia,NA
 2020-01-28,54,West Virginia,NA
 2020-01-29,54,West Virginia,NA
@@ -51536,8 +51900,15 @@ date,location,location_name,value
 2022-10-18,54,West Virginia,2
 2022-10-19,54,West Virginia,1
 2022-10-20,54,West Virginia,4
-2022-10-21,54,West Virginia,4
-2022-10-22,54,West Virginia,4
+2022-10-21,54,West Virginia,2
+2022-10-22,54,West Virginia,8
+2022-10-23,54,West Virginia,8
+2022-10-24,54,West Virginia,7
+2022-10-25,54,West Virginia,7
+2022-10-26,54,West Virginia,9
+2022-10-27,54,West Virginia,6
+2022-10-28,54,West Virginia,6
+2022-10-29,54,West Virginia,6
 2020-02-29,56,Wyoming,NA
 2020-03-01,56,Wyoming,NA
 2020-03-02,56,Wyoming,NA
@@ -52503,5 +52874,12 @@ date,location,location_name,value
 2022-10-18,56,Wyoming,0
 2022-10-19,56,Wyoming,0
 2022-10-20,56,Wyoming,1
-2022-10-21,56,Wyoming,1
-2022-10-22,56,Wyoming,1
+2022-10-21,56,Wyoming,0
+2022-10-22,56,Wyoming,0
+2022-10-23,56,Wyoming,2
+2022-10-24,56,Wyoming,2
+2022-10-25,56,Wyoming,0
+2022-10-26,56,Wyoming,0
+2022-10-27,56,Wyoming,0
+2022-10-28,56,Wyoming,0
+2022-10-29,56,Wyoming,0

@@ -86,39 +86,30 @@ def model_single():
     }
 
     generated quantities {
-       //latent process and states
-       vector [T+28] Shat;
-       vector [T+28] Ihat;
-       vector [T+28] ihat;
-       vector [T+28] Rhat;
 
-       //build beta time series
-       vector [T+28] log_beta_hat;
-       vector [T+28] beta_hat;
+        real <lower=0> Shat [28];
+        real <lower=0> Ihat [28];
+        real <lower=0> ihat [28];
+        real <lower=0> Rhat [28];
 
-       log_beta_hat[1] = normal_rng( log(0.5), 0.1 );
-       for (t in 1:T+28){
-           log_beta_hat[t] = normal_rng( log_beta_hat[t-1], 1. );
-           beta_hat[t]     = exp(log_beta_hat[t]);
-       }
-       //set the initial time values for the above states
-          ihat[1] = norm_cases[1];
-          Ihat[1] = norm_cases[1];
+        real log_beta_hat = log_beta[T];
+        real beta_hat     = exp(log_beta_hat);
 
-          Shat[1] = (1 - i[1])*s0;
-          Rhat[1] = 0;
+        //start prediction at the last values in the within sample fit
+        ihat[1] = i[T];
+        Ihat[1] = i[T];
 
-       //fill in additional values over time.
-       for (t in 2:T+28){
-             ihat[t] = beta_hat[t]*Ihat[t-1]*Shat[t-1];
-             Ihat[t] = Ihat[t-1] + ihat[t] - gamma*Ihat[t-1];
-             
-             Shat[t] = Shat[t-1] - ihat[t];
-             Rhat[t] = Rhat[t-1] + gamma*Ihat[t-1];
-          }
-       //rescale i to the original population
-       vector [T+28] scaled_ihat;
-       scaled_ihat = ihat*s0*S0;
+        Shat[1] = S[T];
+
+        Rhat[1] = R[T];
+
+        for (t in 2:28){
+          ihat[t] = beta_hat*Ihat[t-1]*Shat[t-1];
+          Ihat[t] = Ihat[t-1] + ihat[t] - gamma*Ihat[t-1];
+
+          Shat[t] = Shat[t-1] - ihat[t];
+          Rhat[t] = Rhat[t-1] + gamma*Ihat[t-1];
+        }
     }
 '''
     return model_code
@@ -191,9 +182,9 @@ def model_seasons():
     model {
        //setup priors
        for (s in 1:seasons){
-           log_beta[1,s]~normal( log(0.5), 10 );
+           log_beta[1,s]~normal( log(0.5), 1 );
            for (t in 2:T[s]){
-              log_beta[t,s] ~normal( log_beta[t-1,s], 0.001 );
+              log_beta[t,s] ~normal( log_beta[t-1,s], 0.05 );
            }
        }
 
@@ -260,18 +251,16 @@ def from_date_to_epiweek(x):
 
 if __name__ == "__main__":
 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--LOCATION'     ,type=str) 
-    # parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
-    # parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--LOCATION'     ,type=str) 
+    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
     
-    # args = parser.parse_args()
-    # LOCATION      = args.LOCATION
-    # RETROSPECTIVE = args.RETROSPECTIVE
+    args = parser.parse_args()
+    LOCATION      = args.LOCATION
+    RETROSPECTIVE = args.RETROSPECTIVE
+    END_DATE      = args.END_DATE
 
-    LOCATION = '50'
-    RETROSPECTIVE=0
-   
     hhs_data = pd.read_csv("../../data-truth/truth-Incident Hospitalizations-daily.csv")
 
     populations = pd.read_csv("../../data-locations/locations.csv")
@@ -296,15 +285,12 @@ if __name__ == "__main__":
     training_data[1,C:] = 1. #--adding some small number 
 
     data = { "S0":S0
-             ,"seasons":2
-             ,"cases": training_data.astype(int).T
-             ,"T": [T,C]
+             ,"seasons":1
+             ,"cases": training_data.astype(int)[1,:C]
+             ,"T": C
              ,"T_forecast":28
     }
-    model_code = model_seasons()
-    
-    #model = pyjags.Model( model_code, data =data, chains = 4) 
-    #samples = model.sample(1000, vars=['i'])
+    model_code = model_single()
 
     posterior  = stan.build(model_code, data=data)
     fit        = posterior.sample(num_chains=4, num_samples=1000)

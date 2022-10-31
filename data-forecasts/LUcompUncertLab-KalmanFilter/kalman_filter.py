@@ -121,58 +121,35 @@ if __name__ == "__main__":
            vector [T] y;
         }
         parameters { 
-           real beta0; 
            vector [T] latent_state;
-           vector [T] latent_state_before;
  
            real alpha; 
-           real beta; 
-
-           real <lower=0> lambda;    
-            
-           real alpha_before;
-           real beta_before;
+           vector [10] beta; 
 
            real <lower = 0> sigma;
-           real <lower = 0> sigma_before;
-
            real <lower = 0> phi;
+
         }
-        transformed parameters {
-           vector[T] lp;
-           lp = rep_vector(0, T);
-           for (s in 1:T)
-               for (t in 1:T)
-                  if (t > s){
-                     lp[s] = poisson_lpmf(s | lambda) + normal_lpdf( y[t] | latent_state[t], phi );  
-                  } else{   
-                     lp[s] = poisson_lpmf(s | lambda) + normal_lpdf( y[t] |  latent_state_before[t], phi );  
-                  }
-           }
-      
         model {
-
-             //When flu season begins
-             lambda ~ gamma(1,1);
-
-             int begin=0;
-             //begin ~ poisson( lambda );
- 
              //AR hidden latent
              latent_state[1] ~ normal(0,10);
-             latent_state_before[1] ~ normal(0,10);
 
+             for(l in 1:10){
+                 beta[l]~double_exponential(0,0.01);
+             }
              sigma~normal(1,10);
-             sigma_before~normal(1,10);
-             
-             for (t in 2:T){
-                latent_state[t] ~  normal(alpha + beta*latent_state[t-1], sigma);
-             }
-             for (t in 2:T){
-                 latent_state_before[t] ~  normal(alpha_before + beta_before*latent_state[t-1], sigma_before);
-             }
-             target += log_sum_exp(lp);
 
+             for (t in 11:T){
+                real mu=alpha;
+                for(l in 1:10){
+                    mu+=beta[l]*latent_state[t-l];
+                }
+                latent_state[t] ~  normal(mu, sigma);
+             }
+             //observation model
+             for (t in 1:T){
+                y[t] ~ normal(latent_state[t], phi);   
+             }
         }
         generated quantities { 
             vector [T] y_hat;
@@ -180,23 +157,27 @@ if __name__ == "__main__":
 
             for (t in 1:T){
                real latent   = normal_rng(latent_state[t], sigma);
-               y_hat[t] = normal_rng(latent, phi);
+               y_hat[t]      = normal_rng(latent, phi);
             }
 
-            vector [4] latent;
-            latent[1] = normal_rng(alpha+beta*latent_state[T], sigma);
-            for (l in 2:4){
-               latent[l] = normal_rng(alpha+beta*latent[l-1], sigma);
+            vector [14] latent;
+            for (t in 1:10){
+                 latent[t] = latent_state[T-10+t];
+            }
+
+            for (t in 11:14){
+               real muhat = alpha;
+               for (l in 1:10){
+                   muhat+=beta[l]*latent[t-l];
+               }
+               latent[t] = normal_rng(muhat, sigma);
             }
             for (f in 1:4){
-               y_forecast[f] = normal_rng(latent[f], phi);
+               y_forecast[f] = normal_rng(latent[10+f], phi);
             }
-
-           //change point
-           real s = poisson_rng(lambda);
         }
     '''
-    
+   
     model_data = {"T":len(centered_ys), "y":centered_ys}
     posterior  = stan.build(old_stan_model, data=model_data)
     fit        = posterior.sample(num_chains=4, num_samples=1000)
