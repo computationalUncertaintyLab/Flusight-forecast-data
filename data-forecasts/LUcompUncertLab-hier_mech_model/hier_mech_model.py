@@ -121,13 +121,13 @@ def model_seasons():
     data {
        real S0;
        int seasons;
-       int T [seasons];
+       array [seasons] int T;
        int T_forecast;
-       int cases [T[1], seasons ]; 
+       array [T[1], seasons ] int cases ; 
     }
     transformed data {
         //normalized cases (ie divide by S0)
-        real norm_cases [T[1], seasons]; 
+        array [T[1], seasons] real norm_cases ; 
         for (s in 1:seasons){
            for (t in 1:T[s]){
               norm_cases[t,s] = cases[t,s] / S0;
@@ -135,15 +135,15 @@ def model_seasons():
         }
     }
     parameters {
-       real log_beta [T[1], seasons] ;
-       real <lower=0> phi;       
+       array [T[1], seasons]  real log_beta ;
+       array [seasons] real <lower=0> phi;       
        real <lower=0,upper=1>s0;
-
     }
     transformed parameters {
+       
 
        // exponentiate log beta
-       real beta [T[1], seasons];
+       array [T[1], seasons] real beta ;
 
        for (s in 1:seasons){
           for(t in 1:T[s]){
@@ -151,22 +151,34 @@ def model_seasons():
           }
        }
 
+       //process model
        //latent process and states
-        real <lower=0> S [T[1], seasons];
-        real <lower=0> I [T[1], seasons];
-        real <lower=0> i [T[1], seasons];
-        real <lower=0> R [T[1], seasons];
+        array[T[1],seasons] real <lower=0>  S;
+        array[T[1],seasons] real <lower=0>  I;
+        array[T[1],seasons] real <lower=0>  i;
+        array[T[1],seasons] real <lower=0>  R;
+
+       //init all to zeros
+       for (s in 1:seasons){
+          for (t in 1:T[1]){
+              S[t,s]=0;
+              i[t,s]=0;
+              I[t,s]=0;
+              R[t,s]=0;
+          }
+        }
 
        //set the initial time values for the above states
        for (s in 1:seasons){
-           i[1,s] = norm_cases[1,1];
+           i[1,s] = 1./ S0;
            I[1,s] = norm_cases[1,1];
 
            S[1,s] = (1 - i[1][s])*s0;
           
            R[1,s] = 0;
        }
-       real gamma = 1.;
+    
+       real gamma = 0.2;
 
        //fill in additional values over time.
         for (s in 1:seasons){ 
@@ -178,40 +190,44 @@ def model_seasons():
                  R[t,s] = R[t-1,s] + gamma*I[t-1,s];
             }
         }
+
     }
     model {
        //setup priors
        for (s in 1:seasons){
-           log_beta[1,s]~normal( log(0.5), 1 );
+           log_beta[1,s]~normal( log(0.5), 0.025 );
            for (t in 2:T[s]){
-              log_beta[t,s] ~normal( log_beta[t-1,s], 0.05 );
+              log_beta[t,s] ~normal( log_beta[t-1,s], 0.025 );
            }
        }
 
-       phi~normal(0,10);
-       
-       s0~beta(5,5);
+       for (s in 1:seasons){
+          phi[s]~normal(0,10);
+       }
+       s0~normal(0.50,0.01);
+
 
        //observation model
         for (s in 1:seasons){
            for (t in 2:T[s]){
-              cases[t,s]~neg_binomial_2( S0*(1 - i[1,s])*s0*i[t,s], phi );
+              cases[t,s]~neg_binomial_2( S0*(1 - i[1,s])*s0*i[t,s], phi[s] );
            }
         }
     }
+
     generated quantities {
 
-        real <lower=0> Shat [28];
-        real <lower=0> Ihat [28];
-        real <lower=0> ihat [28];
-        real <lower=0> Rhat [28];
+        array [28] real <lower=0> Shat;
+        array [28] real <lower=0> Ihat;
+        array [28] real <lower=0> ihat;
+        array [28] real <lower=0> Rhat;
 
         real log_beta_hat = log_beta[T[seasons],seasons];
         real beta_hat     = exp(log_beta_hat);
 
         //start prediction at the last values in the within sample fit
         ihat[1] = i[T[seasons],seasons];
-        Ihat[1] = i[T[seasons],seasons];
+        Ihat[1] = I[T[seasons],seasons];
 
         Shat[1] = S[T[seasons],seasons];
 
@@ -225,8 +241,12 @@ def model_seasons():
           Rhat[t] = Rhat[t-1] + gamma*Ihat[t-1];
         }   
    }
+
+
 '''
     return model_code
+
+
 
     
 def from_date_to_epiweek(x):
@@ -260,7 +280,8 @@ if __name__ == "__main__":
     LOCATION      = args.LOCATION
     RETROSPECTIVE = args.RETROSPECTIVE
     END_DATE      = args.END_DATE
-
+   
+    
     hhs_data = pd.read_csv("../../data-truth/truth-Incident Hospitalizations-daily.csv")
 
     populations = pd.read_csv("../../data-locations/locations.csv")
@@ -282,15 +303,33 @@ if __name__ == "__main__":
     training_data = np.zeros((2,T))
     training_data[0,:]  = last_season.value.values
     training_data[1,:C] = current_season_flu.value.values + 1 #--adding a one
-    training_data[1,C:] = 1. #--adding some small number 
+    training_data[1,C:] = 0. #--adding some small number 
 
+    training_data = training_data.astype(int).T
+
+    print(training_data)
+
+    #--fit single season first
+    # data = { "S0":S0
+    #          ,"seasons":1
+    #          ,"cases": training_data[:,0].reshape(-1,1)
+    #          ,"T": [T]
+    #          ,"T_forecast":28
+    # }
+    # model_code = model_seasons()
+
+    # posterior  = stan.build(model_code, data=data)
+    # fit        = posterior.sample(num_chains=4, num_samples=1000)
+ 
+    
+    #--fit multi season
     data = { "S0":S0
-             ,"seasons":1
-             ,"cases": training_data.astype(int)[1,:C]
-             ,"T": C
+             ,"seasons":2
+             ,"cases": training_data
+             ,"T": [T,C]
              ,"T_forecast":28
     }
-    model_code = model_single()
+    model_code = model_seasons()
 
     posterior  = stan.build(model_code, data=data)
     fit        = posterior.sample(num_chains=4, num_samples=1000)
