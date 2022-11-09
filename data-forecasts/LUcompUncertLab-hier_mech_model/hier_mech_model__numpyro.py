@@ -11,12 +11,13 @@ import argparse
 import numpyro.distributions as dist
 import numpyro
 
-from numpyro.infer import MCMC, NUTS, MixedHMC, HMC
+from numpyro.infer import MCMC, NUTS, HMC, Predictive
 from numpyro.distributions import constraints
 
+import jax
 from jax import random
 import jax.numpy as jnp
-import jax
+
 
 def from_date_to_epiweek(x):
     from datetime import datetime, timedelta
@@ -42,21 +43,19 @@ if __name__ == "__main__":
 
     numpyro.enable_x64(True)
     numpyro.validation_enabled(True)
+    from jax.config import config
+    config.update("jax_enable_x64", True)
 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--LOCATION'     ,type=str) 
-    # parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
-    # parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--LOCATION'     ,type=str) 
+    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
     
-    # args = parser.parse_args()
-    # LOCATION      = args.LOCATION
-    # RETROSPECTIVE = args.RETROSPECTIVE
-    # END_DATE      = args.END_DATE
-
-    LOCATION="42"
-    RETROSPECTIVE=0
-    END_DATE=0
-    
+    args = parser.parse_args()
+    LOCATION      = args.LOCATION
+    RETROSPECTIVE = args.RETROSPECTIVE
+    END_DATE      = args.END_DATE
+   
     hhs_data = pd.read_csv("../../data-truth/truth-Incident Hospitalizations-daily.csv")
 
     populations = pd.read_csv("../../data-locations/locations.csv")
@@ -84,10 +83,7 @@ if __name__ == "__main__":
 
     training_data__normalized = training_data / S0
 
-    from jax.config import config
-    config.update("jax_enable_x64", True)
-
-    def hier_sir_model( T, C, SEASONS, ttl, training_data=None):
+    def hier_sir_model( T, C, SEASONS, ttl, training_data=None, future=0):
         def one_step(carry, aray_element):
             S,i,I,R = carry
             t,beta  = aray_element
@@ -144,11 +140,20 @@ if __name__ == "__main__":
             #--observations are assumed to be generated from a negative binomial
             ivals = numpyro.deterministic("ivals_{:d}".format(s), jnp.clip(result[:,1], 1*10**-10, jnp.inf))
 
-            LL  = numpyro.sample("LL_{:d}".format(s), dist.NegativeBinomial2(ivals*ttl, 1./phi[s]), obs = training_data[:times[s],s] )
+            LL  = numpyro.sample("LL_{:d}".format(s), dist.Poisson(ivals*ttl), obs = training_data[:times[s],s] )
 
+        #--prediction
+        if future>0:
+            forecast_betas = beta[C,SEASONS]*jnp.ones((future,))
+            lastS,lasti,lastI,lastR = states[C,:]
+            
+            final, result = jax.lax.scan( one_step, jnp.array([lastS,lasti,lastI,lastR]), (np.arange(0,future),forecast_betas) )
+            
+            numpyro.deterministic("forecast", result[:,1] )
+            
     nuts_kernel = NUTS(hier_sir_model)
     
-    mcmc = MCMC( nuts_kernel , num_warmup=500, num_samples=1000)
+    mcmc = MCMC( nuts_kernel , num_warmup=1500, num_samples=2000)
     rng_key = random.PRNGKey(0)
 
     mcmc.run(rng_key
@@ -157,5 +162,83 @@ if __name__ == "__main__":
              , SEASONS = 2
              , ttl = S0
              , training_data = training_data
+             , future = 28
              , extra_fields=('potential_energy',))
+    mcmc.print_summary()
+    samples = mcmc.get_samples()
+
+
+    predictions = {"t":[],"sample":[],"value":[]}
+    for sample,values in enumerate(samples["forecast"]):
+        for time,value in enumerate(values):
+            predictions['t'].append(time)
+            predictions['sample'].append(sample)
+            predictions['value'].append(value*S0)
+    predictions = pd.DataFrame(predictions)
+ 
+    weekly_agg = {"t":[],"wk":[]}
+    for t in np.arange(0,28):
+        weekly_agg['t'].append(t)
+
+        if 0<=t<=6:
+            weekly_agg['wk'].append(1)
+        elif 7<=t<=13:
+            weekly_agg['wk'].append(2)
+        elif 14<=t<=20:
+            weekly_agg['wk'].append(3)
+        elif 21<=t<=28:
+            weekly_agg['wk'].append(4)
+    weekly_agg = pd.DataFrame(weekly_agg)
+
+    predictions = predictions.merge(weekly_agg, on = ['t'])
+
+    def accumulate_daily_to_weekly(x):
+        return pd.Series({"hosps":x.value.sum()})
+    predictions_weekly = predictions.groupby(["wk","sample"]).apply( accumulate_daily_to_weekly ).reset_index()
+
+    predictions_weekly__wide = pd.pivot_table(index="sample", columns = ["wk"], values = ["hosps"], data = predictions_weekly) 
+
+    Q = np.round([0.01,0.025] + list(np.arange(0.05,0.95+0.05,0.05)) + [0.975,0.99],3)
+    N = len(Q)
     
+    quantiles = np.percentile(predictions_weekly__wide,100*Q,axis=0)
+
+    #--compute all time information for forecast submission
+    if RETROSPECTIVE:
+        number_of_days_until_monday = next_monday(from_date=END_DATE)
+        monday = next_monday(True, from_date=END_DATE)
+
+        next_sat = next_saturday_after_monday_submission( number_of_days_until_monday, from_date=END_DATE )    
+    else:
+        number_of_days_until_monday = next_monday()
+        monday = next_monday(True)
+
+        next_sat = next_saturday_after_monday_submission( number_of_days_until_monday)    
+    target_end_dates = collect_target_end_dates(next_sat)
+    
+    #--store all forecasts in a DataFrame
+    forecast = {"target":[], "target_end_date":[], "quantile":[], "value":[]}
+    for n,week_ahead_prediction in enumerate(quantiles.T):
+        forecast["value"].extend(week_ahead_prediction)
+        forecast["quantile"].extend(Q)
+
+        #--items that need to be repeated Q times
+        forecast["target"].extend( ["{:d} wk ahead inc flu hosp".format(n+1)]*N)
+        forecast["target_end_date"].extend( [target_end_dates[n]]*N)
+        
+    forecast = pd.DataFrame(forecast)
+    forecast["location"]      = LOCATION
+    forecast["type"]          = "quantile"
+    forecast["forecast_date"] = monday
+
+    #--format quantile to three decimals
+    forecast['quantile'] = ["{:0.3f}".format(q) for q in forecast["quantile"]]
+
+    #--format values to three decimals
+    forecast['value'] = ["{:0.3f}".format(q) for q in forecast["value"]]
+
+    #--output data
+    if RETROSPECTIVE:
+        forecast.to_csv("./retrospective_analysis/location_{:s}_end_{:s}.csv".format(LOCATION,END_DATE),index=False)
+    else:
+        forecast.to_csv("./forecasts/location__{:s}.csv".format(LOCATION),index=False)
