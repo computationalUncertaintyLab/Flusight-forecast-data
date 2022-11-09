@@ -86,33 +86,35 @@ if __name__ == "__main__":
 
     from jax.config import config
     config.update("jax_enable_x64", True)
-    
-    def hier_sir_model( T, C, SEASONS, training_data=None):
+
+    def hier_sir_model( T, C, SEASONS, ttl, training_data=None):
         def one_step(carry, aray_element):
             S,i,I,R = carry
             t,beta  = aray_element
             
-            i = beta*I*S
+            newi = beta*I*S
             r = 0.25*I
             
             newI = I + i - r
             newS = S - i
             newR = R + r
 
-            states =jnp.array( [newS,i,newI,newR] )
+            states = jnp.array([newS,newi,newI,newR] )
 
             return states, states
 
+        training_data__normalized = training_data / ttl
+        
         #--prior for beta and set gamma to be fixed
-
-        log_beta     = numpyro.sample( "log_beta", dist.Normal( np.log(0.30)*np.ones( (T,SEASONS)) , 0.1 ) )
+        log_beta     =  numpyro.sample( "log_beta", dist.Normal( np.log(0.50)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
+        
         #cum_log_beta = numpyro.deterministic("c_log_beta", jnp.cumsum(log_beta,0))
         
         beta     = numpyro.deterministic("beta", jnp.exp(log_beta))
         gamma    = 0.25
 
         #--prior for percent of population that is susceptible
-        percent_sus = numpyro.sample("percent_sus", dist.Uniform(0.01 ,0.99) )
+        percent_sus = numpyro.sample("percent_sus", dist.Beta(2,2) )
 
         #--process model
         S = jnp.zeros( (T,SEASONS) )
@@ -123,28 +125,26 @@ if __name__ == "__main__":
         #--Run process
         times = np.array([T,C])
 
+        phi = numpyro.sample("phi", dist.Gamma( jnp.array([10,10]),jnp.array([1,1])) )
+        
         for s in np.arange(0,SEASONS):
             ts     = np.arange(0,times[s])
             betas  = beta[:times[s],s]
 
-            times_betas = jnp.transpose( jnp.vstack([ts,betas]) )
+            i0 = training_data__normalized[0,s] 
+            I0 = training_data__normalized[0,s]
 
-            i0 = training_data[0,s] 
-            I0 = training_data[0,s]
-            
             S0 = 1.*percent_sus - i0
             R0 = 0.
 
-            final, result = jax.lax.scan( one_step, jnp.array([S0,i0,I0,R0]), times_betas )
+            final, result = jax.lax.scan( one_step, jnp.array([S0,i0,I0,R0]), (ts,betas) )
 
             states = numpyro.deterministic("states_{:d}".format(s),result)
-               
-            #--observations are assumed to be generated from a negative binomial
-            phi = numpyro.sample("phi_{:d}".format(s), dist.Gamma(1,1) )
 
+            #--observations are assumed to be generated from a negative binomial
             ivals = numpyro.deterministic("ivals_{:d}".format(s), jnp.clip(result[:,1], 1*10**-10, jnp.inf))
-            
-            LL  = numpyro.sample("LL_{:d}".format(s), dist.NegativeBinomial2(ivals, phi), obs = training_data[:times[s],s] )
+
+            LL  = numpyro.sample("LL_{:d}".format(s), dist.NegativeBinomial2(ivals*ttl, 1./phi[s]), obs = training_data[:times[s],s] )
 
     nuts_kernel = NUTS(hier_sir_model)
     
@@ -155,6 +155,7 @@ if __name__ == "__main__":
              , T=T
              , C=C
              , SEASONS = 2
-             , training_data = training_data__normalized
+             , ttl = S0
+             , training_data = training_data
              , extra_fields=('potential_energy',))
     
