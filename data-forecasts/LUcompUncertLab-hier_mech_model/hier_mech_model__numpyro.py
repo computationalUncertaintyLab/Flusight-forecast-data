@@ -46,15 +46,19 @@ if __name__ == "__main__":
     from jax.config import config
     config.update("jax_enable_x64", True)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--LOCATION'     ,type=str) 
-    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
-    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--LOCATION'     ,type=str) 
+    # parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    # parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
     
-    args = parser.parse_args()
-    LOCATION      = args.LOCATION
-    RETROSPECTIVE = args.RETROSPECTIVE
-    END_DATE      = args.END_DATE
+    # args = parser.parse_args()
+    # LOCATION      = args.LOCATION
+    # RETROSPECTIVE = args.RETROSPECTIVE
+    # END_DATE      = args.END_DATE
+
+    LOCATION='12'
+    RETROSPECTIVE=0
+    END_DATE=0
    
     hhs_data = pd.read_csv("../../data-truth/truth-Incident Hospitalizations-daily.csv")
 
@@ -121,7 +125,7 @@ if __name__ == "__main__":
         #--Run process
         times = np.array([T,C])
 
-        phi = numpyro.sample("phi", dist.Gamma( jnp.array([10,10]),jnp.array([1,1])) )
+        phi = numpyro.sample("phi", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=100*jnp.ones(2,) ,scale=100*jnp.ones(2,)) ) 
         
         for s in np.arange(0,SEASONS):
             ts     = np.arange(0,times[s])
@@ -141,7 +145,9 @@ if __name__ == "__main__":
             ivals = numpyro.deterministic("ivals_{:d}".format(s), jnp.clip(result[:,1], 1*10**-10, jnp.inf))
 
             LL  = numpyro.sample("LL_{:d}".format(s), dist.Poisson(ivals*ttl), obs = training_data[:times[s],s] )
-
+            #LL  = numpyro.sample("LL_{:d}".format(s), dist.NegativeBinomial2(ivals*ttl, phi[s]), obs = training_data[:times[s],s] )
+            
+            
         #--prediction
         if future>0:
             forecast_betas = beta[C,SEASONS]*jnp.ones((future,))
