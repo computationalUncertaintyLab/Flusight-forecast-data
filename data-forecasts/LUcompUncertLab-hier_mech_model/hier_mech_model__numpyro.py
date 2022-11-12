@@ -60,16 +60,18 @@ if __name__ == "__main__":
     RETROSPECTIVE=0
     END_DATE=0
    
-    hhs_data = pd.read_csv("../../data-truth/truth-Incident Hospitalizations-daily.csv")
-
-    populations = pd.read_csv("../../data-locations/locations.csv")
-    S0 = float(populations.loc[populations.location==LOCATION, "population"])
+    hhs_data = pd.read_csv("../LUData/hhs_data__daily.csv")
+    
+    S0 = float(hhs_data.loc[hhs_data.location==LOCATION, "population"].iloc[0])
     
     flu = hhs_data.loc[hhs_data.location==LOCATION]
     flu_times = flu.groupby("date").apply(from_date_to_epiweek)
 
     flu = flu.merge(flu_times, on = ["date"])
 
+    #--sort by time
+    flu = flu.sort_values("date")
+    
     #--subset to october to august
     last_season = flu.loc[ (flu.date >= "2022-01-01") & (flu.date <="2022-08-01")]
     current_season_flu = flu.loc[ (flu.date >= "2022-09-15") ]
@@ -77,85 +79,115 @@ if __name__ == "__main__":
     #--prepare training data
     T = last_season.shape[0]
     C = current_season_flu.shape[0]
-    
-    training_data = np.zeros((2,T))
-    training_data[0,:]  = last_season.value.values
-    training_data[1,:C] = current_season_flu.value.values + 1 #--adding a one
-    training_data[1,C:] = 0. #--adding some small number 
 
-    training_data = training_data.astype(int).T
+    #--hosp data
+    training_data__hosps = np.zeros((2,T))
+    training_data__hosps[0,:]  = last_season.hosps.values
+    training_data__hosps[1,:C] = current_season_flu.hosps.values + 1 #--adding a one
+    training_data__hosps[1,C:] = 0. #--adding some small number
 
-    training_data__normalized = training_data / S0
+    training_data__hosps = training_data__hosps.astype(int).T
 
-    def hier_sir_model( T, C, SEASONS, ttl, training_data=None, future=0):
+    #--death data
+    training_data__deaths = np.zeros((2,T))
+    training_data__deaths[0,:]  = last_season.deaths.values
+    training_data__deaths[1,:C] = current_season_flu.deaths.values + 1 #--adding a one
+    training_data__deaths[1,C:] = 0. #--adding some small number
+
+    training_data__deaths = training_data__deaths.astype(int).T
+
+
+    def hier_sir_model( T, C, SEASONS, ttl, training_data__hosps=None, training_data__deaths=None, future=0):
         def one_step(carry, aray_element):
-            S,i,I,R = carry
-            t,beta  = aray_element
+            S,I,i2h,H,R,h2d,D = carry
+            t,beta,rho,kappa  = aray_element
             
-            newi = beta*I*S
-            r = 0.25*I
-            
-            newI = I + i - r
-            newS = S - i
-            newR = R + r
+            s2i  = beta*I*S        # S->I
+            i2r  = (rho*0.25)*I    # I->R (lambda = 0.25)
+            i2h  = (rho*0.75)*I    # I->H 
+            h2d  = (kappa*0.75)*H  # H->D
+            h2r  = (kappa*0.25)*H  # H->R
 
-            states = jnp.array([newS,newi,newI,newR] )
+            I = I + s2i - i2r - i2h
+            H = H + i2h - h2d - h2r
+            D = D + h2d
+            S = S - s2i
+            
+            R = R + i2r + h2r
+
+            states = jnp.array([S,I,i2h,H,R,h2d,D] )
 
             return states, states
 
-        training_data__normalized = training_data / ttl
+        training_data__hosps__normalized  = training_data__hosps / ttl
+        training_data__deaths__normalized = training_data__deaths / ttl
         
         #--prior for beta and set gamma to be fixed
-        log_beta     =  numpyro.sample( "log_beta", dist.Normal( np.log(0.50)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
-        
-        #cum_log_beta = numpyro.deterministic("c_log_beta", jnp.cumsum(log_beta,0))
-        
+        log_beta =  numpyro.sample( "log_beta", dist.Normal( np.log(0.50)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
         beta     = numpyro.deterministic("beta", jnp.exp(log_beta))
-        gamma    = 0.25
+
+        log_kappa =  numpyro.sample( "log_kappa", dist.Normal( np.log(0.50)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
+        kappa     = numpyro.deterministic("kappa", jnp.exp(log_kappa))
+
+        log_rho =  numpyro.sample( "log_rho", dist.Normal( np.log(0.50)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
+        rho     = numpyro.deterministic("rho", jnp.exp(log_rho))
 
         #--prior for percent of population that is susceptible
         percent_sus = numpyro.sample("percent_sus", dist.Beta(2,2) )
 
         #--process model
-        S = jnp.zeros( (T,SEASONS) )
-        i = jnp.zeros( (T,SEASONS) )
-        I = jnp.zeros( (T,SEASONS) )
-        R = jnp.zeros( (T,SEASONS) )
+        S   = jnp.zeros( (T,SEASONS) )
+        I   = jnp.zeros( (T,SEASONS) )
+        i2h = jnp.zeros( (T,SEASONS) ) #--incident hosps
+        H   = jnp.zeros( (T,SEASONS) )
+        R   = jnp.zeros( (T,SEASONS) )
+        h2d = jnp.zeros( (T,SEASONS) ) #--incident deaths
+        D   = jnp.zeros( (T,SEASONS) )
         
         #--Run process
         times = np.array([T,C])
 
-        phi = numpyro.sample("phi", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=100*jnp.ones(2,) ,scale=100*jnp.ones(2,)) ) 
+        #phi = numpyro.sample("phi", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=100*jnp.ones(2,) ,scale=100*jnp.ones(2,)) ) 
         
         for s in np.arange(0,SEASONS):
             ts     = np.arange(0,times[s])
             betas  = beta[:times[s],s]
+            kappas = kappa[:times[s],s]
+            rhos   = rho[:times[s],s]
+            
+            i2h0 = training_data__hosps__normalized[0,s] 
+            H0   = training_data__hosps__normalized[0,s]
 
-            i0 = training_data__normalized[0,s] 
-            I0 = training_data__normalized[0,s]
-
-            S0 = 1.*percent_sus - i0
+            I0 = 2.
+            S0 = 1.*percent_sus - I0
+            
             R0 = 0.
 
-            final, result = jax.lax.scan( one_step, jnp.array([S0,i0,I0,R0]), (ts,betas) )
+            h2d0 = training_data__deaths__normalized[0,s] 
+            D0   = training_data__deaths__normalized[0,s] 
+
+            final, result = jax.lax.scan( one_step, jnp.array([S0,I0,i2h0,H0,R0,h2d0,D0]), (ts,betas,rhos,kappas) )
 
             states = numpyro.deterministic("states_{:d}".format(s),result)
 
             #--observations are assumed to be generated from a negative binomial
-            ivals = numpyro.deterministic("ivals_{:d}".format(s), jnp.clip(result[:,1], 1*10**-10, jnp.inf))
+            i2h__vals = numpyro.deterministic("i2h__vals_{:d}".format(s), jnp.clip(result[:,2], 1*10**-10, jnp.inf))
+            h2d__vals = numpyro.deterministic("h2d__vals_{:d}".format(s), jnp.clip(result[:,2], 1*10**-10, jnp.inf))
 
-            LL  = numpyro.sample("LL_{:d}".format(s), dist.Poisson(ivals*ttl), obs = training_data[:times[s],s] )
+            LL1  = numpyro.sample("LL_H_{:d}".format(s), dist.Poisson(i2h__vals*ttl), obs = training_data__hosps[:times[s],s] )
+            LL2  = numpyro.sample("LL_D_{:d}".format(s), dist.Poisson(h2d__vals*ttl), obs = training_data__deaths[:times[s],s] )
+            
             #LL  = numpyro.sample("LL_{:d}".format(s), dist.NegativeBinomial2(ivals*ttl, phi[s]), obs = training_data[:times[s],s] )
             
             
         #--prediction
-        if future>0:
-            forecast_betas = beta[C,SEASONS]*jnp.ones((future,))
-            lastS,lasti,lastI,lastR = states[C,:]
+        # if future>0:
+        #     forecast_betas = beta[C,SEASONS]*jnp.ones((future,))
+        #     lastS,lasti,lastI,lastR = states[C,:]
             
-            final, result = jax.lax.scan( one_step, jnp.array([lastS,lasti,lastI,lastR]), (np.arange(0,future),forecast_betas) )
+        #     final, result = jax.lax.scan( one_step, jnp.array([lastS,lasti,lastI,lastR]), (np.arange(0,future),forecast_betas) )
             
-            numpyro.deterministic("forecast", result[:,1] )
+        #     numpyro.deterministic("forecast", result[:,1] )
             
     nuts_kernel = NUTS(hier_sir_model)
     
@@ -167,7 +199,8 @@ if __name__ == "__main__":
              , C=C
              , SEASONS = 2
              , ttl = S0
-             , training_data = training_data
+             , training_data__hosps  = training_data__hosps
+             , training_data__deaths = training_data__deaths
              , future = 28
              , extra_fields=('potential_energy',))
     mcmc.print_summary()
