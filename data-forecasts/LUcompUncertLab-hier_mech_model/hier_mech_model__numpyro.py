@@ -87,7 +87,8 @@ if __name__ == "__main__":
     training_data__hosps[1,C:] = 0. #--adding some small number
 
     training_data__hosps = training_data__hosps.astype(int).T
-
+    training_data__hosps__norm = training_data__hosps / S0
+    
     #--death data
     training_data__deaths = np.zeros((2,T))
     training_data__deaths[0,:]  = last_season.deaths.values
@@ -95,29 +96,33 @@ if __name__ == "__main__":
     training_data__deaths[1,C:] = 0. #--adding some small number
 
     training_data__deaths = training_data__deaths.astype(int).T
-
+    training_data__deaths__norm = training_data__deaths / S0
+    
 
     def hier_sir_model( T, C, SEASONS, ttl, training_data__hosps=None, training_data__deaths=None, future=0):
         def one_step(carry, aray_element):
             S,I,i2h,H,R,h2d,D = carry
             t,beta,rho,kappa  = aray_element
+
+            rho = 0.25
             
             s2i  = beta*I*S        # S->I
             i2r  = (rho*0.25)*I    # I->R (lambda = 0.25)
             i2h  = (rho*0.75)*I    # I->H 
-            h2d  = (kappa*0.75)*H  # H->D
-            h2r  = (kappa*0.25)*H  # H->R
+            h2d  = (kappa*0.01)*H  # H->D
+            h2r  = (kappa*0.99)*H  # H->R
 
-            I = I + s2i - i2r - i2h
-            H = H + i2h - h2d - h2r
-            D = D + h2d
-            S = S - s2i
+            nI = I + s2i - (i2r + i2h)
+            nH = H + i2h - (h2d + h2r)
+            nD = D + h2d
+            nS = S - s2i
             
-            R = R + i2r + h2r
+            nR = R + (i2r + h2r)
 
-            states = jnp.array([S,I,i2h,H,R,h2d,D] )
+            states = jnp.array([nS,nI,i2h,nH,nR,h2d,nD] )
 
             return states, states
+        
 
         training_data__hosps__normalized  = training_data__hosps / ttl
         training_data__deaths__normalized = training_data__deaths / ttl
@@ -126,12 +131,12 @@ if __name__ == "__main__":
         log_beta =  numpyro.sample( "log_beta", dist.Normal( np.log(0.50)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
         beta     = numpyro.deterministic("beta", jnp.exp(log_beta))
 
-        log_kappa =  numpyro.sample( "log_kappa", dist.Normal( np.log(0.50)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
+        log_rho =  numpyro.sample( "log_rho", dist.Normal( np.log(0.25)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
+        rho     =  numpyro.deterministic("rho", jnp.exp(log_rho))
+
+        log_kappa =  numpyro.sample( "log_kappa", dist.Normal( np.log(0.01)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
         kappa     = numpyro.deterministic("kappa", jnp.exp(log_kappa))
-
-        log_rho =  numpyro.sample( "log_rho", dist.Normal( np.log(0.50)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
-        rho     = numpyro.deterministic("rho", jnp.exp(log_rho))
-
+        
         #--prior for percent of population that is susceptible
         percent_sus = numpyro.sample("percent_sus", dist.Beta(2,2) )
 
@@ -158,7 +163,7 @@ if __name__ == "__main__":
             i2h0 = training_data__hosps__normalized[0,s] 
             H0   = training_data__hosps__normalized[0,s]
 
-            I0 = 2.
+            I0 = training_data__hosps__normalized[0,s]
             S0 = 1.*percent_sus - I0
             
             R0 = 0.
@@ -172,10 +177,10 @@ if __name__ == "__main__":
 
             #--observations are assumed to be generated from a negative binomial
             i2h__vals = numpyro.deterministic("i2h__vals_{:d}".format(s), jnp.clip(result[:,2], 1*10**-10, jnp.inf))
-            h2d__vals = numpyro.deterministic("h2d__vals_{:d}".format(s), jnp.clip(result[:,2], 1*10**-10, jnp.inf))
+            h2d__vals = numpyro.deterministic("h2d__vals_{:d}".format(s), jnp.clip(result[:,5], 1*10**-10, jnp.inf))
 
             LL1  = numpyro.sample("LL_H_{:d}".format(s), dist.Poisson(i2h__vals*ttl), obs = training_data__hosps[:times[s],s] )
-            LL2  = numpyro.sample("LL_D_{:d}".format(s), dist.Poisson(h2d__vals*ttl), obs = training_data__deaths[:times[s],s] )
+            #LL2  = numpyro.sample("LL_D_{:d}".format(s), dist.Poisson(h2d__vals*ttl), obs = training_data__deaths[:times[s],s] )
             
             #LL  = numpyro.sample("LL_{:d}".format(s), dist.NegativeBinomial2(ivals*ttl, phi[s]), obs = training_data[:times[s],s] )
             
