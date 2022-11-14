@@ -46,20 +46,17 @@ if __name__ == "__main__":
     from jax.config import config
     config.update("jax_enable_x64", True)
 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--LOCATION'     ,type=str) 
-    # parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
-    # parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--LOCATION'     ,type=str) 
+    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
     
-    # args = parser.parse_args()
-    # LOCATION      = args.LOCATION
-    # RETROSPECTIVE = args.RETROSPECTIVE
-    # END_DATE      = args.END_DATE
+    args = parser.parse_args()
+    LOCATION      = args.LOCATION
+    RETROSPECTIVE = args.RETROSPECTIVE
+    END_DATE      = args.END_DATE
 
-    LOCATION='12'
-    RETROSPECTIVE=0
-    END_DATE=0
-   
+  
     hhs_data = pd.read_csv("../LUData/hhs_data__daily.csv")
     
     S0 = float(hhs_data.loc[hhs_data.location==LOCATION, "population"].iloc[0])
@@ -122,7 +119,6 @@ if __name__ == "__main__":
             states = jnp.array([nS,nI,i2h,nH,nR,h2d,nD] )
 
             return states, states
-        
 
         training_data__hosps__normalized  = training_data__hosps / ttl
         training_data__deaths__normalized = training_data__deaths / ttl
@@ -186,13 +182,16 @@ if __name__ == "__main__":
             
             
         #--prediction
-        # if future>0:
-        #     forecast_betas = beta[C,SEASONS]*jnp.ones((future,))
-        #     lastS,lasti,lastI,lastR = states[C,:]
+        if future>0:
+            forecast_betas  = beta[C,SEASONS]*jnp.ones((future,))
+            forecast_rhos   = rho[C,SEASONS]*jnp.ones((future,))
+            forecast_kappas = kappa[C,SEASONS]*jnp.ones((future,))
             
-        #     final, result = jax.lax.scan( one_step, jnp.array([lastS,lasti,lastI,lastR]), (np.arange(0,future),forecast_betas) )
+            #lastS,lastI,lasti2h,lastH,lastR, lasth2d, lastD = states[C,:]
             
-        #     numpyro.deterministic("forecast", result[:,1] )
+            final, result = jax.lax.scan( one_step, states[C,:], (np.arange(0,future),forecast_betas, forecast_rhos, forecast_kappas) )
+            
+            numpyro.deterministic("forecast", result[:,2] )
             
     nuts_kernel = NUTS(hier_sir_model)
     
