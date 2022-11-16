@@ -116,13 +116,11 @@ if __name__ == "__main__":
     
     def hier_sir_model( T, ttl, training_data__hosps=None, training_data__deaths=None, future=0):
         def one_step(carry, aray_element):
-            S,I,i2h,H,R,h2d,D = carry
-            t,beta,rho,kappa, start_time, S0,I0,i2h0,H0,R0,h2d0,D0  = aray_element
+            def propogate(carry,aray_element):
+                S,I,i2h,H,R,h2d,D = carry
+                t,beta,rho,kappa, start_time, S0,I0,i2h0,H0,R0,h2d0,D0  = aray_element
+               
 
-            jax.lax.cond(t < start_time, lambda: 0, lambda x:
-                states = jnp.array([S0,I0,i2h0,H0,R0,h2d0,D0] )
-                         
-            elif t > start_time:
                 rho = 0.25
 
                 s2i  = beta*I*S        # S->I
@@ -139,11 +137,31 @@ if __name__ == "__main__":
                 nR = R + (i2r + h2r)
 
                 states = jnp.array([nS,nI,i2h,nH,nR,h2d,nD] )
+                return states
+            
+            S,I,i2h,H,R,h2d,D = carry
+            t,beta,rho,kappa, start_time, S0,I0,i2h0,H0,R0,h2d0,D0  = aray_element
 
-            else:
-                states = jnp.array([0,0,0,0,0,0,0])
+            def equal_or_greater_than(t,start_time,carry,aray_element):
+                states2 = jax.lax.cond( t == start_time
+                                    , lambda x,y: jnp.array([S0,I0,i2h0,H0,R0,h2d0,D0])
+                                    , propogate
+                                    , carry, aray_element
+                                    )
+                return states2
+
+
+            
+            states1 = jax.lax.cond(t < start_time
+                                  , lambda x: jnp.zeros(7,)
+                                  , lambda t,start_time,carry,aray_element: equal_or_greater_than
+                                   , t, start_time,carry, aray_element )
+
+            
+
+            
+
             return states,states
-                
 
         training_data__hosps__normalized  = training_data__hosps / ttl
         training_data__deaths__normalized = training_data__deaths / ttl
@@ -171,7 +189,6 @@ if __name__ == "__main__":
         #--prior for percent of population that is susceptible
         percent_sus = numpyro.sample("percent_sus", dist.Beta(1,1) )
 
-
         #--process model
         S   = jnp.zeros( (T,) )
         I   = jnp.zeros( (T,) )
@@ -195,7 +212,6 @@ if __name__ == "__main__":
 
         h2d0 = training_data__deaths__normalized[0,0] 
         D0   = training_data__deaths__normalized[0,0]
-
 
         final, result = jax.lax.scan( one_step
                                       , jnp.array([S0,I0,i2h0,H0,R0, h2d0, D0])
