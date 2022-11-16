@@ -115,12 +115,12 @@ if __name__ == "__main__":
     training_data__deaths__norm = training_data__deaths / S0
     
     def hier_sir_model( T, ttl, training_data__hosps=None, training_data__deaths=None, future=0):
+        
         def one_step(carry, aray_element):
             def propogate(carry,aray_element):
                 S,I,i2h,H,R,h2d,D = carry
                 t,beta,rho,kappa, start_time, S0,I0,i2h0,H0,R0,h2d0,D0  = aray_element
                
-
                 rho = 0.25
 
                 s2i  = beta*I*S        # S->I
@@ -139,9 +139,6 @@ if __name__ == "__main__":
                 states = jnp.array([nS,nI,i2h,nH,nR,h2d,nD] )
                 return states
             
-            S,I,i2h,H,R,h2d,D = carry
-            t,beta,rho,kappa, start_time, S0,I0,i2h0,H0,R0,h2d0,D0  = aray_element
-
             def equal_or_greater_than(t,start_time,carry,aray_element):
                 states2 = jax.lax.cond( t == start_time
                                     , lambda x,y: jnp.array([S0,I0,i2h0,H0,R0,h2d0,D0])
@@ -150,17 +147,14 @@ if __name__ == "__main__":
                                     )
                 return states2
 
+            t,beta,rho,kappa, start_time, S0,I0,i2h0,H0,R0,h2d0,D0  = aray_element
 
+            print(carry)
             
-            states1 = jax.lax.cond(t < start_time
-                                  , lambda x: jnp.zeros(7,)
-                                  , lambda t,start_time,carry,aray_element: equal_or_greater_than
-                                   , t, start_time,carry, aray_element )
-
-            
-
-            
-
+            states = jax.lax.cond(t < start_time
+                                  , lambda t, start_time, carry, aray_element: jnp.ones(7,)*1*10**(-10)
+                                  , equal_or_greater_than
+                                  , t, start_time, carry, aray_element )
             return states,states
 
         training_data__hosps__normalized  = training_data__hosps / ttl
@@ -168,10 +162,6 @@ if __name__ == "__main__":
 
         #--cutoff
         start_time = numpyro.sample("start_time", dist.Uniform(0,T))
-        # helper     = jnp.arange(0,T)
-        
-        # indicators_formech = jnp.ones(T,)*(helper >= T)
-        # indicators_forPois = jnp.ones(T,)*(helper < T)
         
         #--poisson process before 
         lam = numpyro.sample( "lambda", dist.Gamma(1,1) )
@@ -223,7 +213,6 @@ if __name__ == "__main__":
                                          ,0*jnp.ones(T,)
                                          ,training_data__deaths__normalized
                                          ,training_data__deaths__normalized)
-
                                      )
 
         states = numpyro.deterministic("states",result)
@@ -233,20 +222,10 @@ if __name__ == "__main__":
         h2d__vals = numpyro.deterministic("h2d__vals", jnp.clip(result[:,5], 1*10**-20, jnp.inf))
 
         times    = jnp.arange(0,T)
-        epidemic = jnp.flip(i2h__vals*( times <=start_time))
-        
-        constant = lam*(times > start_time)
-
-        constant_then_epidemic = jnp.flip(epidemic + constant)
-
-        print(constant_then_epidemic)
-        
-        numpyro.deterministic( "epidemic", constant_then_epidemic  )
-
-        
+       
         #--LogLikeLihood
         LL  = numpyro.sample("LL"
-                              , dist.Poisson(constant_then_epidemic)
+                              , dist.Poisson( states[:,2]*ttl  )
                               , obs = training_data__hosps )
         #--prediction
         if future>0:
