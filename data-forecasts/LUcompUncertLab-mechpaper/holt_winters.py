@@ -123,7 +123,7 @@ if __name__ == "__main__":
         if forecast > 0:
             level, trend = final_level_and_trend
             y_forecast = level + trend*jnp.arange(1,forecast+1)
-            numpyro.deterministic("y_forecast", y_forecast)
+            numpyro.deterministic("forecast", y_forecast)
             
     nuts_kernel = NUTS(model)
     
