@@ -46,16 +46,20 @@ if __name__ == "__main__":
     from jax.config import config
     config.update("jax_enable_x64", True)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--LOCATION'     ,type=str) 
-    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
-    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--LOCATION'     ,type=str) 
+    # parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    # parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
     
-    args = parser.parse_args()
-    LOCATION      = args.LOCATION
-    RETROSPECTIVE = args.RETROSPECTIVE
-    END_DATE      = args.END_DATE
+    # args = parser.parse_args()
+    # LOCATION      = args.LOCATION
+    # RETROSPECTIVE = args.RETROSPECTIVE
+    # END_DATE      = args.END_DATE
 
+    LOCATION="42"
+    RETROSPECTIVE = 0
+    END_DATE = 0
+    
   
     hhs_data = pd.read_csv("../LUData/hhs_data__daily.csv")
     
@@ -167,6 +171,7 @@ if __name__ == "__main__":
             h2d0 = training_data__deaths__normalized[0,s] 
             D0   = training_data__deaths__normalized[0,s] 
 
+            print(jnp.array([S0,I0,i2h0,H0,R0,h2d0,D0]))
             final, result = jax.lax.scan( one_step, jnp.array([S0,I0,i2h0,H0,R0,h2d0,D0]), (ts,betas,rhos,kappas) )
 
             states = numpyro.deterministic("states_{:d}".format(s),result)

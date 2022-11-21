@@ -57,7 +57,7 @@ if __name__ == "__main__":
     # END_DATE      = args.END_DATE
 
 
-    LOCATION='08'
+    LOCATION='42'
     RETROSPECTIVE = 0
     END_DATE= 0
     
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     #flu2022 = flu.loc[ (flu.date >= "2022-01-01") & (flu.date <="2022-08-01")]
     #current_season_flu = flu.loc[ (flu.date >= "2022-09-15") ]
 
-    flu2022 = flu.loc[ (flu.date >= "2022-09-15") ]
+    flu2022 = flu.loc[ (flu.date >= "2021-10-01") & (flu.date <="2022-08-01") ]
     
     if RETROSPECTIVE:
         flu2022 = flu2022.loc[ flu2022.date <= datetime.strptime(args.END_DATE,"%Y-%m-%d")]
@@ -113,19 +113,21 @@ if __name__ == "__main__":
 
     training_data__deaths = training_data__deaths.astype(int).T
     training_data__deaths__norm = training_data__deaths / S0
+
     
     def hier_sir_model( T, ttl, training_data__hosps=None, training_data__deaths=None, future=0):
-        
+
         def one_step(carry, aray_element):
-            def propogate(carry,aray_element):
-                S,I,i2h,H,R,h2d,D = carry
-                t,beta,rho,kappa, start_time, S0,I0,i2h0,H0,R0,h2d0,D0  = aray_element
-               
+            
+            def propogate(state, params):
+                S,I,i2h,H,R,h2d,D = state
+                t,beta,kappa = params
+
                 rho = 0.25
 
                 s2i  = beta*I*S        # S->I
-                i2r  = (rho*0.25)*I    # I->R (lambda = 0.25)
-                i2h  = (rho*0.75)*I    # I->H 
+                i2r  = (rho*0.25)*I      # I->R (lambda = 0.25)
+                i2h  = (rho*0.75)*I      # I->H 
                 h2d  = (kappa*0.01)*H  # H->D
                 h2r  = (kappa*0.99)*H  # H->R
 
@@ -138,74 +140,68 @@ if __name__ == "__main__":
 
                 states = jnp.array([nS,nI,i2h,nH,nR,h2d,nD] )
                 return states
-            
-            def equal_or_greater_than(t,start_time,carry,aray_element):
+
+            def equal_or_greater_than(carry, array):
+                S,I,i2h,H,R,h2d,D       = carry
+                
+                t,beta,kappa,lam,start_time,S0,I0,i2h0,H0,R0,h2d0,D0  = array
+
+                inital_states = jnp.array([S0,I0,i2h0,H0,R0,h2d0,D0])
+                params = jnp.array([t,beta,kappa])
+                
                 states2 = jax.lax.cond( t == start_time
-                                    , lambda x,y: jnp.array([S0,I0,i2h0,H0,R0,h2d0,D0])
+                                    , lambda x,y: inital_states
                                     , propogate
-                                    , carry, aray_element
+                                    , carry, params
                                     )
                 return states2
 
-            t,beta,rho,kappa, start_time, S0,I0,i2h0,H0,R0,h2d0,D0  = aray_element
-
-            print(carry)
-            
+                
+            t,beta,kappa,lam,start_time,S0,I0,i2h0,H0,R0,h2d0,D0  = aray_element
             states = jax.lax.cond(t < start_time
-                                  , lambda t, start_time, carry, aray_element: jnp.ones(7,)*1*10**(-10)
+                                  , lambda carry, aray_element: jnp.ones(7,)*lam
                                   , equal_or_greater_than
-                                  , t, start_time, carry, aray_element )
-            return states,states
-
-        training_data__hosps__normalized  = training_data__hosps / ttl
-        training_data__deaths__normalized = training_data__deaths / ttl
+                                  , carry, aray_element )
+                
+            return states, states
+        
+        training_data__hosps__normalized  = training_data__hosps / ttl #(training_data__hosps / ttl).reshape(-1,)
+        training_data__deaths__normalized = training_data__deaths / ttl #).reshape(-1,)
 
         #--cutoff
-        start_time = numpyro.sample("start_time", dist.Uniform(0,T))
+        start_time = numpyro.sample("start_time", dist.Normal(T/2,1))
+        #start_time = 5
         
         #--poisson process before 
         lam = numpyro.sample( "lambda", dist.Gamma(1,1) )
 
         #--prior for beta and set gamma to be fixed
-        log_beta = numpyro.sample( "log_beta"  , dist.Normal( np.log(0.50)*jnp.ones( (T,) ) , 0.1 ) )
+        log_beta = numpyro.sample( "log_beta"  , dist.Normal( jnp.log(0.5)*jnp.ones( (T,) ) , 0.1 ) )
         betas     = numpyro.deterministic("beta", jnp.exp(log_beta))
 
-        log_rho  =  numpyro.sample( "log_rho"  , dist.Normal( np.log(0.25)*jnp.ones( (T,) ) , 0.1 ) )
-        rhos     =  numpyro.deterministic("rho", jnp.exp(log_rho))
-
-        log_kappa = numpyro.sample( "log_kappa"  , dist.Normal( np.log(0.01)*jnp.ones( (T,) ) , 0.1 ) )
+        log_kappa = numpyro.sample( "log_kappa"  , dist.Normal( jnp.log(0.01)*jnp.ones( (T,) ) , 0.1 ) )
         kappas     = numpyro.deterministic("kappa", jnp.exp(log_kappa))
 
         #--prior for percent of population that is susceptible
         percent_sus = numpyro.sample("percent_sus", dist.Beta(1,1) )
 
-        #--process model
-        S   = jnp.zeros( (T,) )
-        I   = jnp.zeros( (T,) )
-        i2h = jnp.zeros( (T,) ) #--incident hosps
-        H   = jnp.zeros( (T,) )
-        R   = jnp.zeros( (T,) )
-        h2d = jnp.zeros( (T,) ) #--incident deaths
-        D   = jnp.zeros( (T,) )
-
-        #phi = numpyro.sample("phi", dist.time_AFtimeERruncatedNormal(low= 0.*jnp.ones(2,) ,loc=100*jnp.ones(2,) ,scale=100*jnp.ones(2,)) ) 
-
         ts     = np.arange(0,T)
         
-        i2h0 = training_data__hosps__normalized[0,0]
-        H0   = training_data__hosps__normalized[0,0]
+        i2h0 = training_data__hosps__normalized[0]
+        H0   = training_data__hosps__normalized[0]
 
-        I0 = training_data__hosps__normalized[0,0]
+        I0 = training_data__hosps__normalized[0]
         S0 = 1.*percent_sus - I0
 
         R0 = 0.
 
-        h2d0 = training_data__deaths__normalized[0,0] 
-        D0   = training_data__deaths__normalized[0,0]
+        h2d0 = training_data__deaths__normalized[0] 
+        D0   = training_data__deaths__normalized[0]
 
         final, result = jax.lax.scan( one_step
                                       , jnp.array([S0,I0,i2h0,H0,R0, h2d0, D0])
-                                      , (ts,betas,rhos,kappas, jnp.ones(T,)*start_time
+                                      , (ts,betas,kappas,lam*jnp.ones(T,)
+                                         ,jnp.ones(T,)*start_time
                                          ,S0*jnp.ones(T,)
                                          ,training_data__hosps__normalized
                                          ,training_data__hosps__normalized
@@ -218,14 +214,14 @@ if __name__ == "__main__":
         states = numpyro.deterministic("states",result)
 
         #--observations are assumed to be generated from a negative binomial
-        i2h__vals = numpyro.deterministic("i2h__vals", jnp.clip(result[:,2], 1*10**-20, jnp.inf))
-        h2d__vals = numpyro.deterministic("h2d__vals", jnp.clip(result[:,5], 1*10**-20, jnp.inf))
+        i2h__vals = numpyro.deterministic("i2h__vals", jnp.clip(result[:,2], 1*10**-10, jnp.inf))
+        h2d__vals = numpyro.deterministic("h2d__vals", jnp.clip(result[:,5], 1*10**-10, jnp.inf))
 
         times    = jnp.arange(0,T)
        
         #--LogLikeLihood
         LL  = numpyro.sample("LL"
-                              , dist.Poisson( states[:,2]*ttl  )
+                              , dist.Poisson( i2h__vals*ttl  )
                               , obs = training_data__hosps )
         #--prediction
         if future>0:
@@ -245,8 +241,8 @@ if __name__ == "__main__":
     mcmc.run(rng_key
              , T=T
              , ttl = S0
-             , training_data__hosps  = training_data__hosps
-             , training_data__deaths = training_data__deaths
+             , training_data__hosps  = training_data__hosps.reshape(-1,)
+             , training_data__deaths = training_data__deaths.reshape(-1,)
              , future = 0
              , extra_fields=('potential_energy',))
     mcmc.print_summary()
