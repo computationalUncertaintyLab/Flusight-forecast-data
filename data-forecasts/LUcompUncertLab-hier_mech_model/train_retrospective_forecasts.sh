@@ -1,6 +1,6 @@
 #mcandrew
 
-modelscript=hier_mech_model.py
+modelscript=hier_mech_model__numpyro.py
 
 while read -r location;
 do
