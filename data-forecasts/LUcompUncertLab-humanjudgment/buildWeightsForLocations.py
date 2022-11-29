@@ -121,6 +121,11 @@ if __name__ == "__main__":
     X = fluwide[location_names].values
     Y = fluwide.values
 
+    LAST_T_WEEKS = 5
+    
+    X = X[-LAST_T_WEEKS:,:]
+    Y = Y[-LAST_T_WEEKS:,:]
+    
     quantiles = inter.grabInterpolatedQuantiles()
 
     # scale these to per 100K
