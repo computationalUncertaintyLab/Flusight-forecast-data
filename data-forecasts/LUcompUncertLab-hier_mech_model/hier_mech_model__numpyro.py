@@ -133,7 +133,7 @@ if __name__ == "__main__":
         kappa     = numpyro.deterministic("kappa", jnp.exp(log_kappa))
         
         #--prior for percent of population that is susceptible
-        percent_sus = numpyro.sample("percent_sus", dist.Beta(2,2) )
+        percent_sus = numpyro.sample("percent_sus", dist.Beta(0.05,0.05) )
 
         #--process model
         S   = jnp.zeros( (T,SEASONS) )
@@ -182,8 +182,8 @@ if __name__ == "__main__":
             
         #--prediction
         if future>0:
-            forecast_betas  = beta[C,SEASONS]*jnp.ones((future,))
-            forecast_rhos   = rho[C,SEASONS]*jnp.ones((future,))
+            forecast_betas  = beta[C ,SEASONS]*jnp.ones((future,))
+            forecast_rhos   = rho[C  ,SEASONS]*jnp.ones((future,))
             forecast_kappas = kappa[C,SEASONS]*jnp.ones((future,))
             
             #lastS,lastI,lasti2h,lastH,lastR, lasth2d, lastD = states[C,:]
