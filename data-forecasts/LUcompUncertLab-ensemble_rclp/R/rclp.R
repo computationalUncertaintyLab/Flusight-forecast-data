@@ -52,7 +52,7 @@ source("./R/get_rclp_quantiles.R")
 
 # The reference_date is the date of the Saturday relative to which week-ahead
 # targets are defined.
-reference_date <- "2022-12-03"#args[1]
+reference_date <- "2022-12-10"#args[1]
 
 # rclp_method is the name of a class provided by the rclp module. Currently, one
 # of "EqualLP", "LP", or "BetaMixtureRCLP" (in increasing order of complexity)
@@ -68,7 +68,7 @@ K <- as.integer(5) #as.integer(args[3])
 history_length <- "all" # args[4]
 
 # results_path is the location where the output should be saved
-results_path <- "./2022-12-05-LUcompUncertLab-ensemble_rclp.csv" #args[5]
+results_path <- "./2022-12-12-LUcompUncertLab-ensemble_rclp.csv" #args[5]
 
 # Get the list of required locations
 required_locations <-
@@ -90,7 +90,7 @@ weekly_data <- load_flu_hosp_data(
 # Load component forecasts
 component_forecasts <- covidHubUtils::load_forecasts_repo(
   file_path = paste0("./component-forecasts/"),
-  forecast_dates = seq(ymd('2022-09-05'),ymd('2022-12-05'), by = '1 week'),
+  forecast_dates = seq(ymd('2022-09-05'),ymd('2022-12-12'), by = '1 week'),
   locations = NULL,
   types = "quantile",
   targets = NULL,
