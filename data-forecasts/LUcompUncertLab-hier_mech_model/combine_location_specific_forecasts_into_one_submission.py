@@ -10,7 +10,7 @@ from glob import glob
 
 if __name__ == "__main__":
 
-    monday_submission = next_monday(1)
+    monday_submission = next_monday(1,from_date="2022-12-25")
     model_name = collect_model_name()
     for n,fil in enumerate(glob("./forecasts/*.csv")):
         d = pd.read_csv(fil)
