@@ -224,8 +224,8 @@ if __name__ == "__main__":
 
         next_sat = next_saturday_after_monday_submission( number_of_days_until_monday, from_date=END_DATE )    
     else:
-        number_of_days_until_monday = next_monday()
-        monday = next_monday(True)
+        number_of_days_until_monday = next_monday(from_date="2022-12-25")
+        monday = next_monday(True, from_date="2022-12-25")
 
         next_sat = next_saturday_after_monday_submission( number_of_days_until_monday)    
     target_end_dates = collect_target_end_dates(next_sat)
