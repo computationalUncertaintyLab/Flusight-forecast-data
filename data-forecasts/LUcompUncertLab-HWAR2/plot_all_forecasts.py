@@ -14,7 +14,7 @@ import seaborn as sns
 
 if __name__ == "__main__":
 
-    monday_submission = next_monday(1,from_date="2022-12-25")
+    monday_submission = next_monday(1)
     model_name = collect_model_name()
     
     forecasts = pd.read_csv("{:s}-{:s}.csv".format(monday_submission,model_name))

@@ -147,7 +147,7 @@ if __name__ == "__main__":
         #--Run process
         times = np.array([T,C])
 
-        #phi = numpyro.sample("phi", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=100*jnp.ones(2,) ,scale=100*jnp.ones(2,)) ) 
+        phi = numpyro.sample("phi", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=100*jnp.ones(2,) ,scale=100*jnp.ones(2,)) ) 
         
         for s in np.arange(0,SEASONS):
             ts     = np.arange(0,times[s])
@@ -174,10 +174,10 @@ if __name__ == "__main__":
             i2h__vals = numpyro.deterministic("i2h__vals_{:d}".format(s), jnp.clip(result[:,2], 1*10**-10, jnp.inf))
             h2d__vals = numpyro.deterministic("h2d__vals_{:d}".format(s), jnp.clip(result[:,5], 1*10**-10, jnp.inf))
 
-            LL1  = numpyro.sample("LL_H_{:d}".format(s), dist.Poisson(i2h__vals*ttl), obs = training_data__hosps[:times[s],s] )
+            #LL1  = numpyro.sample("LL_H_{:d}".format(s), dist.Poisson(i2h__vals*ttl), obs = training_data__hosps[:times[s],s] ) ##<- this one previously
             #LL2  = numpyro.sample("LL_D_{:d}".format(s), dist.Poisson(h2d__vals*ttl), obs = training_data__deaths[:times[s],s] )
             
-            #LL  = numpyro.sample("LL_{:d}".format(s), dist.NegativeBinomial2(ivals*ttl, phi[s]), obs = training_data[:times[s],s] )
+            LL  = numpyro.sample("LL_H_{:d}".format(s), dist.NegativeBinomial2(i2h__vals*ttl, phi[s]), obs = training_data__hosps[:times[s],s] )
             
             
         #--prediction
@@ -185,8 +185,6 @@ if __name__ == "__main__":
             forecast_betas  = beta[C ,SEASONS]*jnp.ones((future,))
             forecast_rhos   = rho[C  ,SEASONS]*jnp.ones((future,))
             forecast_kappas = kappa[C,SEASONS]*jnp.ones((future,))
-            
-            #lastS,lastI,lasti2h,lastH,lastR, lasth2d, lastD = states[C,:]
             
             final, result = jax.lax.scan( one_step, states[C,:], (np.arange(0,future),forecast_betas, forecast_rhos, forecast_kappas) )
             
@@ -252,8 +250,8 @@ if __name__ == "__main__":
 
         next_sat = next_saturday_after_monday_submission( number_of_days_until_monday, from_date=END_DATE )    
     else:
-        number_of_days_until_monday = next_monday(from_date="2022-12-25")
-        monday = next_monday(True, from_date="2022-12-25")
+        number_of_days_until_monday = next_monday()
+        monday = next_monday(True)
 
         next_sat = next_saturday_after_monday_submission( number_of_days_until_monday)    
     target_end_dates = collect_target_end_dates(next_sat)
