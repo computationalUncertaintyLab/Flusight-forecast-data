@@ -18,11 +18,10 @@ import jax
 from jax import random
 import jax.numpy as jnp
 
-#from statsmodels.tsa.holtwinters import ExponentialSmoothing as holt
-
 #from patsy import dmatrix
 from joblib import Parallel, delayed
 from scoring import *
+import itertools
 
 
 class comp_model_data(object):
@@ -69,7 +68,7 @@ class comp_model_data(object):
 
         #--add in the FLUVIEW data
         fluview = pd.read_csv("../LUData/fluview_ili.csv")
-        fluview["location"] = ["{:02d}".format(x) if x != "US" else x for x in fluview.location.values]
+        #fluview["location"] = ["{:02d}".format(x) if x != "US" and isinstance(x,int) else x for x in fluview.location.values]
 
         fluview = fluview.loc[fluview.location==self.LOCATION]
 
@@ -191,6 +190,7 @@ class comp_model_data(object):
 
 def model( T, C, weekly_T,weekly_C, SEASONS, ttl
                 , prior_param                     = None
+                , prior_phis                      = None
                 , training_data__hosps            = None
                 , training_data__deaths           = None
                 , training_data__cases            = None
@@ -201,7 +201,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
         S,s2i,I,i2h,H,R,h2d,D = carry
         t,beta,rho,kappa  = aray_element
 
-        rho = 0.25
+        #rho = 0.25
 
         s2i  = beta*I*S        # S->I
         i2r  = (rho*0.25)*I    # I->R (lambda = 0.25)
@@ -226,23 +226,16 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     training_data__cases__normalized  = training_data__cases  / ttl 
 
     #--prior for beta and set gamma to be fixed
-    params   = numpyro.sample( "params", dist.Normal( jnp.zeros((weekly_T,SEASONS)), prior_param*jnp.ones((weekly_T,SEASONS)) ) )
+    params   = numpyro.sample( "beta_params", dist.Normal( jnp.zeros((weekly_T,SEASONS)), prior_param*jnp.ones((weekly_T,SEASONS)) ) )
     log_beta = np.repeat(params,7,axis=0) + jnp.log(0.25)
-    
-    #log_beta = jnp.dot(domain,params) + jnp.log(0.25)
-    #log_beta =  numpyro.sample( "log_beta"  , dist.GaussianRandomWalk(prior_for_GRW*jnp.ones(SEASONS,), T) )
     beta     =  numpyro.deterministic("beta", jnp.exp(log_beta))
-    #beta     =  beta.T
 
-    #print(beta.shape)
-    
-    log_rho =  numpyro.sample( "log_rho", dist.Normal( np.log(0.25)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
+    log_rho =  jnp.log(0.25)*jnp.ones((T,SEASONS)) #numpyro.sample( "log_rho", dist.Normal( np.log(0.25)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
     rho     =  numpyro.deterministic("rho", jnp.exp(log_rho))
 
-    #print(rho.shape)
-
-    log_kappa =  numpyro.sample( "log_kappa", dist.Normal( np.log(0.01)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
-    kappa     = numpyro.deterministic("kappa", jnp.exp(log_kappa))
+    params   = numpyro.sample( "kappa_params", dist.Normal( jnp.zeros((weekly_T,SEASONS)), prior_param*jnp.ones((weekly_T,SEASONS)) ) )
+    log_kappa = np.repeat(params,7,axis=0) + jnp.log(0.05)
+    kappa     =  numpyro.deterministic("kappa", jnp.exp(log_kappa))
 
     #--prior for percent of population that is susceptible
     percent_sus = numpyro.sample("percent_sus", dist.Beta(0.5*20,0.5*20) )
@@ -262,8 +255,8 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     times        = np.array([T,C])
     weekly_times = np.array([weekly_T,weekly_C])
 
-    phi_hosps = numpyro.sample("phi_hosps", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=10*jnp.ones(2,)) )
-    phi_cases = numpyro.sample("phi_cases", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=10*jnp.ones(2,)) )
+    phi_hosps = numpyro.sample("phi_hosps", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=prior_phis[0]*jnp.ones(2,)) )
+    phi_cases = numpyro.sample("phi_cases", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=prior_phis[1]*jnp.ones(2,)) )
 
     for s in np.arange(0,SEASONS):
         ts     = np.arange(0,times[s])
@@ -436,10 +429,10 @@ if __name__ == "__main__":
 
     #--RUNNING THE MODEL
     nuts_kernel = NUTS(model)
-    mcmc        = MCMC( nuts_kernel , num_warmup=1500, num_samples=2000)
+    mcmc        = MCMC( nuts_kernel , num_warmup=1500, num_samples=2000,progress_bar=False)
     rng_key     = random.PRNGKey(0)
     
-    def model_run(mcmc, prior_param):
+    def model_run(mcmc, prior_param, prior_phis):
         mcmc.run(rng_key
                  , T= model_data.T
                  , C= model_data.C
@@ -448,6 +441,7 @@ if __name__ == "__main__":
                  , SEASONS = 2
                  , ttl = model_data.S0
                  , prior_param = prior_param
+                 , prior_phis  = prior_phis
                  , training_data__hosps            = model_data.training_data__hosps
                  , training_data__deaths           = model_data.training_data__deaths
                  , training_data__cases            = model_data.training_data__ili
@@ -458,9 +452,8 @@ if __name__ == "__main__":
         samples = mcmc.get_samples()
         return samples
 
-
-    def score_over_params(P):
-        samples = model_run(mcmc, P)
+    def score_over_params(P,Q):
+        samples = model_run(mcmc, P, Q)
     
         #--BUILDING THE FORECAST DATA FRAME FROM THE MODEL
         forecast = from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=model_data.S0, HOLDOUTWEEKS=4)
@@ -475,17 +468,18 @@ if __name__ == "__main__":
     
         scores = forecast.groupby(["target_end_date"]).apply(WIS)
 
-        return (np.mean(scores.values),P)
-        
-    results = Parallel(n_jobs=20)(delayed(score_over_params)(p) for p in np.linspace(0.005,0.2,25))
+        return (np.mean(scores.values),P,Q)
+
+    combos = [x for x in itertools.product(np.linspace(0.005,0.2,35),[1,10,100], [1,10,100])]
+    results = Parallel(n_jobs=30)(delayed(score_over_params)(p,[q,r]) for (p,q,r) in combos)
     results = sorted(results)
 
-    best_param = results[0][-1]
+    best_beta_param, best_phis = results[0][-2:]
 
-    print(results)
+    print(results[:20])
     
     #--traiing complete now finish
-    samples = model_run(mcmc, best_param)
+    samples = model_run(mcmc,best_beta_param, best_phis)
     forecast = from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=model_data.S0, HOLDOUTWEEKS=0)
     
     #--output data
@@ -493,256 +487,3 @@ if __name__ == "__main__":
         forecast.to_csv("./retrospective_analysis/location_{:s}_end_{:s}.csv".format(LOCATION,END_DATE),index=False)
     else:
         forecast.to_csv("./forecasts/location__{:s}.csv".format(LOCATION),index=False)
-
-    # #--filter betas for forecasting
-    # filtered_betas = []
-    # for beta_sample in samples["log_beta"]:
-    #     dom = np.arange(0,C)
-    #     current_season_beta = beta_sample[-1,:C]
-        
-    #     hw = holt( np.array(current_season_beta), trend='add' ).fit()
-
-    #     filtered_betas.append( np.exp(hw.forecast(28)) )
-
-    # #--filter rhos
-    # filtered_rhos = []
-    # for rho_sample in samples["log_rho"]:
-    #     dom = np.arange(0,C)
-    #     current_season_rho = rho_sample[:C,-1]
-
-    #     hw = holt( np.array(current_season_rho), trend='add' ).fit()
-    #     filtered_rhos.append( np.exp(hw.forecast(28)) )
-
-    # #--filter kappa
-    # filtered_kappas = []
-    # for kappa_sample in samples["log_kappa"]:
-    #     dom = np.arange(0,C)
-    #     current_season_kappa = kappa_sample[:C,-1]
-
-    #     hw = holt( np.array(current_season_kappa), trend='add' ).fit()
-        
-    #     filtered_kappas.append( np.exp(hw.forecast(28)) )
-
-    # def one_step(carry, aray_element):
-    #     S,s2i,I,i2h,H,R,h2d,D = carry
-    #     t,beta,rho,kappa  = aray_element
-
-    #     rho = 0.25
-            
-    #     s2i  = beta*I*S        # S->I
-    #     i2r  = (rho*0.25)*I    # I->R (lambda = 0.25)
-    #     i2h  = (rho*0.75)*I    # I->H 
-    #     h2d  = (kappa*0.01)*H  # H->D
-    #     h2r  = (kappa*0.99)*H  # H->R
-
-    #     nI = I + s2i - (i2r + i2h)
-    #     nH = H + i2h - (h2d + h2r)
-    #     nD = D + h2d
-    #     nS = S - s2i
-            
-    #     nR = R + (i2r + h2r)
-
-    #     states = jnp.array([nS,s2i,nI,i2h,nH,nR,h2d,nD] )
-    #     return states,states
-    
-    # #--collect last states from fit
-    # sum_hosps = np.zeros(28,)
-
-    # hosp_forecast = {"sample":[], 'time':[], "forecast":[]}
-    
-    # for n,state in enumerate(samples["states_1"]):
-    #     last_state = state[-1,:]
-    #     nS,s2i,nI,i2h,nH,nR,h2d,nD = last_state
-
-    #     forecast_betas  = filtered_betas[n]
-    #     forecast_rhos   = filtered_rhos[n]
-    #     forecast_kappas = filtered_kappas[n]
-
-    #     final, result = jax.lax.scan( one_step, last_state, (np.arange(0,28),forecast_betas, forecast_rhos, forecast_kappas) )
-
-    #     hosps = np.array(result[:,3])
-    #     hosps[np.isnan(hosps)]    = 0
-    #     hosps[abs(hosps)==np.inf] = 0
-
-
-    #     hosp_forecast['sample'].extend(   [n]*28 )
-    #     hosp_forecast['time'].extend( np.arange(0,28) )
-    #     hosp_forecast['forecast'].extend( hosps*S0 )
-    # hosp_forecast = pd.DataFrame(hosp_forecast)
-
-
-    
-    
-
-
-    
-   
-    # predictions = {"t":[],"sample":[],"value":[]}
-    # for sample,values in enumerate(samples["forecast"]):
-    #     for time,value in enumerate(values):
-    #         predictions['t'].append(time)
-    #         predictions['sample'].append(sample)
-    #         predictions['value'].append(value*S0)
-    # predictions = pd.DataFrame(predictions)
- 
-    # weekly_agg = {"t":[],"wk":[]}
-    # for t in np.arange(0,28):
-    #     weekly_agg['t'].append(t)
-
-    #     if 0<=t<=6:
-    #         weekly_agg['wk'].append(1)
-    #     elif 7<=t<=13:
-    #         weekly_agg['wk'].append(2)
-    #     elif 14<=t<=20:
-    #         weekly_agg['wk'].append(3)
-    #     elif 21<=t<=28:
-    #         weekly_agg['wk'].append(4)
-    # weekly_agg = pd.DataFrame(weekly_agg)
-
-    # predictions = predictions.merge(weekly_agg, on = ['t'])
-
-    # def accumulate_daily_to_weekly(x):
-    #     return pd.Series({"hosps":x.value.sum()})
-    # predictions_weekly = predictions.groupby(["wk","sample"]).apply( accumulate_daily_to_weekly ).reset_index()
-
-    # predictions_weekly__wide = pd.pivot_table(index="sample", columns = ["wk"], values = ["hosps"], data = predictions_weekly) 
-
-    # Q = np.round([0.01,0.025] + list(np.arange(0.05,0.95+0.05,0.05)) + [0.975,0.99],3)
-    # N = len(Q)
-    
-    # quantiles = np.percentile(predictions_weekly__wide,100*Q,axis=0)
-
-    # #--compute all time information for forecast submission
-    # if RETROSPECTIVE:
-    #     number_of_days_until_monday = next_monday(from_date=END_DATE)
-    #     monday = next_monday(True, from_date=END_DATE)
-
-    #     next_sat = next_saturday_after_monday_submission( number_of_days_until_monday, from_date=END_DATE )    
-    # else:
-    #     number_of_days_until_monday = next_monday(from_date="2023-01-01")
-    #     monday = next_monday(True, from_date="2023-01-01")
-
-    #     next_sat = next_saturday_after_monday_submission( number_of_days_until_monday)    
-    # target_end_dates = collect_target_end_dates(next_sat)
-    
-    # #--store all forecasts in a DataFrame
-    # forecast = {"target":[], "target_end_date":[], "quantile":[], "value":[]}
-    # for n,week_ahead_prediction in enumerate(quantiles.T):
-    #     forecast["value"].extend(week_ahead_prediction)
-    #     forecast["quantile"].extend(Q)
-
-    #     #--items that need to be repeated Q times
-    #     forecast["target"].extend( ["{:d} wk ahead inc flu hosp".format(n+1)]*N)
-    #     forecast["target_end_date"].extend( [target_end_dates[n]]*N)
-        
-    # forecast = pd.DataFrame(forecast)
-    # forecast["location"]      = LOCATION
-    # forecast["type"]          = "quantile"
-    # forecast["forecast_date"] = monday
-
-    # #--format quantile to three decimals
-    # forecast['quantile'] = ["{:0.3f}".format(q) for q in forecast["quantile"]]
-
-    # #--format values to three decimals
-    # forecast['value'] = ["{:0.3f}".format(q) for q in forecast["value"]]
-
-
-        #--dep
-        
-    # last_season_week_indicators = {"cdcformat":[],"ind":[]}
-    # last_season_weekly_ili      = {"cdcformat":[],"numili":[]}
-    # for idx, x in last_season.groupby(["cdcformat"]):
-    #     if len(x)<7:
-    #         continue
-    #     else:
-    #         last_season_week_indicators["cdcformat"].append(idx)
-    #         last_season_week_indicators["ind"].append(x.index[-1])
-
-    #         last_season_weekly_ili["cdcformat"].append(idx)
-    #         last_season_weekly_ili["numili"].append(x.numili.values[-1])
-            
-    # last_season_week_indicators = pd.DataFrame(last_season_week_indicators)
-    # last_season_weekly_ili = pd.DataFrame(last_season_weekly_ili)
-
-       
-       
- 
-    # flu = hhs_data.loc[hhs_data.location==LOCATION]
-    # flu_times = flu.groupby("date").apply(from_date_to_epiweek)
-
-    # flu = flu.merge(flu_times, on = ["date"])
-
-    # #--sort by time
-    # flu = flu.sort_values("date")
-
-    # #--add in the FLUVIEW data
-    # fluview = pd.read_csv("../LUData/fluview_ili.csv")
-    # fluview["location"] = ["{:02d}".format(x) if x != "US" else x for x in fluview.location.values]
-    
-    # fluview = fluview.loc[fluview.location==LOCATION]
-
-    # #--drop population from fluview and use the one in HHS
-    # fluview = fluview.drop(columns = ["population"] )
-    
-    # flu = flu.merge( fluview, on = ["start_date","end_date","location"] )
-    
-    #--subset to october to august
-    #last_season        = flu.loc[ (flu.date >= "2022-01-30") & (flu.date <="2022-08-01")]
-    #current_season_flu = flu.loc[ (flu.date >= "2022-09-15") ]
-
-    #--make sure that these are full weeks
-    #def week_check(x):
-    #     if len(x)==7:
-    #         return x
-    # last_season = last_season.groupby(["cdcformat"]).apply(week_check).reset_index(drop=True)
-    # current_season_flu = current_season_flu.groupby(["cdcformat"]).apply(week_check).reset_index(drop=True)
-    
-    #--prepare training data
-    # T = last_season.shape[0]
-    # C = current_season_flu.shape[0]
-
-    # #--hosp data
-    # training_data__hosps = np.zeros((2,T))
-    # training_data__hosps[0,:]  = last_season.hosps.values
-    # training_data__hosps[1,:C] = current_season_flu.hosps.values + 1 #--adding a one
-    # training_data__hosps[1,C:] = 0. #--adding some small number
-
-    # training_data__hosps = training_data__hosps.astype(int).T
-    # training_data__hosps__norm = training_data__hosps / S0
-    
-    # #--death data
-    # training_data__deaths = np.zeros((2,T))
-    # training_data__deaths[0,:]  = last_season.deaths.values
-    # training_data__deaths[1,:C] = current_season_flu.deaths.values + 1 #--adding a one
-    # training_data__deaths[1,C:] = 0. #--adding some small number
-
-    # training_data__deaths = training_data__deaths.astype(int).T
-    # training_data__deaths__norm = training_data__deaths / S0
-   
-    # #--cases data
-    # #--last seasons cases
-    # last_season = last_season.reset_index(drop=True)
-    # last_season_weekly_ili      = last_season.groupby(["cdcformat"]).apply(lambda x: x.iloc[-1]["numili"])
-    # last_season_week_indicators = last_season.groupby(["cdcformat"]).apply(lambda x: x.index[-1])
-
-    # #--current season cases
-    # current_season_flu = current_season_flu.reset_index(drop=True)
-
-    # current_season_flu_weekly_ili      = current_season_flu.groupby(["cdcformat"]).apply(lambda x: x.iloc[-1]["numili"])
-    # current_season_flu_week_indicators = current_season_flu.groupby(["cdcformat"]).apply(lambda x: x.index[-1])
-   
-    # weekly_T = len(last_season_week_indicators) 
-    # weekly_C = len(current_season_flu_week_indicators)
-    
-    # training_data__ili = np.zeros((2,weekly_T))
-    # training_data__ili[0,:]         = last_season_weekly_ili
-    # training_data__ili[1,:weekly_C] = current_season_flu_weekly_ili
-
-    # training_data__ili = training_data__ili.T
-    
-    # ili_indicators              = np.zeros((2,weekly_T))
-    # ili_indicators[0,:]         = last_season_week_indicators
-    # ili_indicators[1,:weekly_C] = current_season_flu_week_indicators
-
-    # ili_indicators = ili_indicators.T.astype(int)
- 
