@@ -432,7 +432,7 @@ if __name__ == "__main__":
     # END_DATE=0
 
     #--MODEL DATA
-    model_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=2)
+    model_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=4)
 
     #--RUNNING THE MODEL
     nuts_kernel = NUTS(model)
@@ -463,7 +463,7 @@ if __name__ == "__main__":
         samples = model_run(mcmc, P)
     
         #--BUILDING THE FORECAST DATA FRAME FROM THE MODEL
-        forecast = from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=model_data.S0, HOLDOUTWEEKS=2)
+        forecast = from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=model_data.S0, HOLDOUTWEEKS=4)
 
         truth = pd.read_csv("../../data-truth/truth-Incident Hospitalizations.csv")
         truth = truth.rename(columns = {"value":"truth"})
@@ -477,11 +477,13 @@ if __name__ == "__main__":
 
         return (np.mean(scores.values),P)
         
-    results = Parallel(n_jobs=10)(delayed(score_over_params)(p) for p in np.linspace(0.01,1.0,10))
+    results = Parallel(n_jobs=20)(delayed(score_over_params)(p) for p in np.linspace(0.005,0.2,25))
     results = sorted(results)
 
     best_param = results[0][-1]
 
+    print(results)
+    
     #--traiing complete now finish
     samples = model_run(mcmc, best_param)
     forecast = from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=model_data.S0, HOLDOUTWEEKS=0)
