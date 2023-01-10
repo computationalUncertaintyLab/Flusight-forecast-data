@@ -469,7 +469,7 @@ if __name__ == "__main__":
     if LOCATION == "US":
         combos = [x for x in itertools.product(np.linspace(0.005,0.3,30),[1000], [1000])]
     else:
-        combos = [x for x in itertools.product(np.linspace(0.005,0.8,100),[1000], [1000])]
+        combos = [x for x in itertools.product(np.linspace(0.001,0.5,100),[1000], [1000])]
     results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
     results = sorted(results)
 
