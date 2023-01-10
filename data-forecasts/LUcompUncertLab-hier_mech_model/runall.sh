@@ -1,4 +1,3 @@
-python3 hier_mech_model__2.0.py --LOCATION=US --RETROSPECTIVE 0
 python3 hier_mech_model__2.0.py --LOCATION=01 --RETROSPECTIVE 0
 python3 hier_mech_model__2.0.py --LOCATION=02 --RETROSPECTIVE 0
 python3 hier_mech_model__2.0.py --LOCATION=04 --RETROSPECTIVE 0
@@ -52,3 +51,4 @@ python3 hier_mech_model__2.0.py --LOCATION=55 --RETROSPECTIVE 0
 python3 hier_mech_model__2.0.py --LOCATION=56 --RETROSPECTIVE 0
 python3 hier_mech_model__2.0.py --LOCATION=72 --RETROSPECTIVE 0
 python3 hier_mech_model__2.0.py --LOCATION=78 --RETROSPECTIVE 0
+python3 hier_mech_model__2.0.py --LOCATION=US --RETROSPECTIVE 0

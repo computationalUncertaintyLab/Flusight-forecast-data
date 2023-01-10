@@ -57,8 +57,8 @@ class comp_model_data(object):
                               ,"start_date":wk.startdate().strftime("%Y-%m-%d")
                               ,"end_date":wk.enddate().strftime("%Y-%m-%d")})
 
-        hhs_data = pd.read_csv("../LUData/hhs_data__daily.csv")
-        flu = hhs_data.loc[hhs_data.location==self.LOCATION]
+        hhs_data  = pd.read_csv("../LUData/hhs_data__daily.csv")
+        flu       = hhs_data.loc[hhs_data.location==self.LOCATION]
         flu_times = flu.groupby("date").apply(from_date_to_epiweek)
 
         flu = flu.merge(flu_times, on = ["date"])
@@ -75,7 +75,7 @@ class comp_model_data(object):
         #--drop population from fluview and use the one in HHS
         fluview = fluview.drop(columns = ["population"] )
 
-        flu = flu.merge( fluview, on = ["start_date","end_date","location"] )
+        flu = flu.merge( fluview, on = ["start_date","end_date","location"], how="left" )
 
         #--return
         self.flu = flu
@@ -86,27 +86,21 @@ class comp_model_data(object):
         self.S0 = S0
 
     def split_into_seasons(self):
-        #HOLDOUTWEEKS = self.HOLDOUTWEEKS
-        
         #--subset to october to august
         last_season        = self.flu.loc[ (self.flu.date >= "2022-01-30") & (self.flu.date <="2022-08-01")]
         current_season_flu = self.flu.loc[ (self.flu.date >= "2022-09-15") ]
 
         #--make sure that these are full weeks
         def week_check(x):
-            if len(x)==7:
+            if len(x)==7 or len(x) == 6:
                 return x
-        last_season = last_season.groupby(["cdcformat"]).apply(week_check).reset_index(drop=True)
-        current_season_flu = current_season_flu.groupby(["cdcformat"]).apply(week_check).reset_index(drop=True)
+        last_season        = last_season.groupby(["ew"]).apply(week_check).reset_index(drop=True)
+        current_season_flu = current_season_flu.groupby(["ew"]).apply(week_check).reset_index(drop=True)
 
         #--attach training
         self.last_season        = last_season#.iloc#[:-HOLDOUTWEEKS,:]
         self.current_season_flu = current_season_flu#.iloc#[:-HOLDOUTWEEKS,:]
 
-        #--attach hold out
-        #self.last_season__test        = last_season.iloc[HOLDOUTWEEKS:,:]
-        #self.current_season_flu__test = current_season_flu.iloc[HOLDOUTWEEKS:,:]
-        
     def prepare_training_data(self):
        
         def fill_training_data(lastseason,currentseason,var):
@@ -233,8 +227,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     log_rho =  jnp.log(0.25)*jnp.ones((T,SEASONS)) #numpyro.sample( "log_rho", dist.Normal( np.log(0.25)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
     rho     =  numpyro.deterministic("rho", jnp.exp(log_rho))
 
-    params   = numpyro.sample( "kappa_params", dist.Normal( jnp.zeros((weekly_T,SEASONS)), prior_param*jnp.ones((weekly_T,SEASONS)) ) )
-    log_kappa = np.repeat(params,7,axis=0) + jnp.log(0.05)
+    log_kappa =  jnp.log(0.05)*jnp.ones((T,SEASONS))
     kappa     =  numpyro.deterministic("kappa", jnp.exp(log_kappa))
 
     #--prior for percent of population that is susceptible
@@ -277,8 +270,9 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
         case_indicators = training_data__cases_indicators[:weekly_times[s],s]
 
-        final, result = jax.lax.scan( one_step, jnp.array([S0,I0,I0,i2h0,H0,R0,h2d0,D0]), (ts,betas,rhos,kappas) )
-
+        initial_states = jnp.array([S0,I0,I0,i2h0,H0,R0,h2d0,D0])
+        final, result = jax.lax.scan( one_step, initial_states, (ts,betas,rhos,kappas) )
+        
         states = numpyro.deterministic("states_{:d}".format(s),result)
 
         #--observations are assumed to be generated from a negative binomial
@@ -307,13 +301,13 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
     #--prediction
     if future>0:
-        forecast_betas = beta[C,SEASONS]*jnp.ones(future,)  #:C+future,SEASONS]
+        forecast_betas = beta[C-1,SEASONS]*jnp.ones(future,)  #:C+future,SEASONS]
         forecast_betas = numpyro.deterministic("forecast_betas", forecast_betas)
 
-        forecast_rhos   = rho[C  ,SEASONS]*jnp.ones((future,))
-        forecast_kappas = kappa[C,SEASONS]*jnp.ones((future,))
+        forecast_rhos   = rho[C-1  ,SEASONS]*jnp.ones((future,))
+        forecast_kappas = kappa[C-1,SEASONS]*jnp.ones((future,))
 
-        final, result = jax.lax.scan( one_step, states[C,:], (np.arange(0,future),forecast_betas, forecast_rhos, forecast_kappas) )
+        final, result = jax.lax.scan( one_step, states[C-1,:], (np.arange(0,future),forecast_betas, forecast_rhos, forecast_kappas) )
 
         numpyro.deterministic("forecast", result[:,3] )
 
@@ -420,7 +414,7 @@ if __name__ == "__main__":
     RETROSPECTIVE = args.RETROSPECTIVE
     END_DATE      = args.END_DATE
 
-    # LOCATION='16'
+    # LOCATION='04'
     # RETROSPECTIVE=0
     # END_DATE=0
 
@@ -432,7 +426,7 @@ if __name__ == "__main__":
     mcmc        = MCMC( nuts_kernel , num_warmup=1500, num_samples=2000,progress_bar=False)
     rng_key     = random.PRNGKey(0)
     
-    def model_run(mcmc, prior_param, prior_phis):
+    def model_run(mcmc, prior_param, prior_phis, model_data):
         mcmc.run(rng_key
                  , T= model_data.T
                  , C= model_data.C
@@ -452,8 +446,8 @@ if __name__ == "__main__":
         samples = mcmc.get_samples()
         return samples
 
-    def score_over_params(P,Q):
-        samples = model_run(mcmc, P, Q)
+    def score_over_params(P,Q, model_data):
+        samples = model_run(mcmc, P, Q, model_data)
     
         #--BUILDING THE FORECAST DATA FRAME FROM THE MODEL
         forecast = from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=model_data.S0, HOLDOUTWEEKS=4)
@@ -470,16 +464,24 @@ if __name__ == "__main__":
 
         return (np.mean(scores.values),P,Q)
 
-    combos = [x for x in itertools.product(np.linspace(0.005,0.2,35),[1,10,100], [1,10,100])]
-    results = Parallel(n_jobs=30)(delayed(score_over_params)(p,[q,r]) for (p,q,r) in combos)
+    score_crossval = lambda P,Q: score_over_params(P,Q,model_data) 
+    
+    if LOCATION == "US":
+        combos = [x for x in itertools.product(np.linspace(0.005,0.3,30),[1000], [1000])]
+    else:
+        combos = [x for x in itertools.product(np.linspace(0.005,0.8,100),[1000], [1000])]
+    results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
     results = sorted(results)
 
     best_beta_param, best_phis = results[0][-2:]
 
     print(results[:20])
+    print(best_beta_param)
+    print(best_phis)
     
     #--traiing complete now finish
-    samples = model_run(mcmc,best_beta_param, best_phis)
+    forecast_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=0)
+    samples = model_run(mcmc,best_beta_param, best_phis, forecast_data)
     forecast = from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=model_data.S0, HOLDOUTWEEKS=0)
     
     #--output data
