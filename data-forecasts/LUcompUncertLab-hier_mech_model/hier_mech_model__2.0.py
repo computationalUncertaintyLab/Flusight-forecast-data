@@ -23,7 +23,6 @@ from joblib import Parallel, delayed
 from scoring import *
 import itertools
 
-
 class comp_model_data(object):
 
     def __init__(self,LOCATION, HOLDOUTWEEKS):
@@ -88,7 +87,9 @@ class comp_model_data(object):
     def split_into_seasons(self):
         #--subset to october to august
         last_season        = self.flu.loc[ (self.flu.date >= "2022-01-30") & (self.flu.date <="2022-08-01")]
-        current_season_flu = self.flu.loc[ (self.flu.date >= "2022-09-15") ]
+        #current_season_flu = self.flu.loc[ (self.flu.date >= "2022-09-15") ]
+        current_season_flu = self.flu.loc[ (self.flu.date >= "2022-10-15") ]
+        
 
         #--make sure that these are full weeks
         def week_check(x):
@@ -106,7 +107,7 @@ class comp_model_data(object):
         def fill_training_data(lastseason,currentseason,var):
             #--hosp data
             training_data = np.zeros((2,T))
-            training_data[0,:]  = lastseason[var].values
+            training_data[0,:]  = lastseason[var].values + 1
             training_data[1,:C] = currentseason[var].values + 1 #--adding a one
             training_data[1,C:] = 0. #--adding zeros
 
@@ -232,6 +233,14 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
     #--prior for percent of population that is susceptible
     percent_sus = numpyro.sample("percent_sus", dist.Beta(0.5*20,0.5*20) )
+
+    #--when the epidemic starts
+    START = numpyro.sample( "START", dist.Uniform(0,C) )
+
+    #--cut all the data at the START point
+    indices = jnp.arange(0,C)
+    training_data__hosps__normalized = training_data__hosps__normalized[ indices > START ,:]
+    
 
     #--process model
     S   = jnp.zeros( (T,SEASONS) )
@@ -404,19 +413,19 @@ if __name__ == "__main__":
     from jax.config import config
     config.update("jax_enable_x64", True)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--LOCATION'     ,type=str) 
-    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
-    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--LOCATION'     ,type=str) 
+    # parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    # parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
     
-    args = parser.parse_args()
-    LOCATION      = args.LOCATION
-    RETROSPECTIVE = args.RETROSPECTIVE
-    END_DATE      = args.END_DATE
+    # args = parser.parse_args()
+    # LOCATION      = args.LOCATION
+    # RETROSPECTIVE = args.RETROSPECTIVE
+    # END_DATE      = args.END_DATE
 
-    # LOCATION='04'
-    # RETROSPECTIVE=0
-    # END_DATE=0
+    LOCATION='33'
+    RETROSPECTIVE=0
+    END_DATE=0
 
     #--MODEL DATA
     model_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=4)
@@ -425,7 +434,7 @@ if __name__ == "__main__":
     nuts_kernel = NUTS(model)
     mcmc        = MCMC( nuts_kernel , num_warmup=1500, num_samples=2000,progress_bar=False)
     rng_key     = random.PRNGKey(0)
-    
+
     def model_run(mcmc, prior_param, prior_phis, model_data):
         mcmc.run(rng_key
                  , T= model_data.T
@@ -466,23 +475,58 @@ if __name__ == "__main__":
 
     score_crossval = lambda P,Q: score_over_params(P,Q,model_data) 
     
-    if LOCATION == "US":
-        combos = [x for x in itertools.product(np.linspace(0.005,0.3,30),[1000], [1000])]
-    else:
-        combos = [x for x in itertools.product(np.linspace(0.001,0.5,100),[1000], [1000])]
-    results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
-    results = sorted(results)
+    # if LOCATION == "US":
+    #     combos = [x for x in itertools.product(np.linspace(0.005,0.3,30),[1000], [1000])]
+    # else:
+    #     combos = [x for x in itertools.product(np.linspace(0.001,0.5,100),[1000], [1000])]
+    # results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
+    # results = sorted(results)
 
-    best_beta_param, best_phis = results[0][-2:]
+    # best_beta_param, best_phis = results[0][-2:]
 
-    print(results[:20])
-    print(best_beta_param)
-    print(best_phis)
+    # print(results[:20])
+    # print(best_beta_param)
+    # print(best_phis)
+
+    best_phis = [100,100]
+    best_beta_param =0.5
     
     #--traiing complete now finish
     forecast_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=0)
     samples = model_run(mcmc,best_beta_param, best_phis, forecast_data)
     forecast = from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=model_data.S0, HOLDOUTWEEKS=0)
+
+    import matplotlib.pyplot as plt
+    fig,axs = plt.subplots(2,2)
+
+    C = forecast_data.C
+    S0 = forecast_data.S0
+    
+    observed_hosps = forecast_data.training_data__hosps[:C,-1]
+    infered_hosps  = samples["hosps_at_day_1"].mean(0)
+    
+    domain = np.arange(0,C)
+
+    ax = axs[0,0]
+    
+    ax.scatter(domain, observed_hosps, color = "k")
+    ax.plot(   domain, infered_hosps    , color = "r" )
+
+    forecast_horizon = np.arange(C,C+28)
+    forecast = samples["forecast"].mean(0)
+    
+    ax.plot(forecast_horizon, forecast*S0, color = "blue", ls = "--")
+
+    ax = axs[0,1]
+    beta_trajectory  = samples["beta"].mean(0)[:,-1]
+    ax.plot( beta_trajectory )
+
+    ax = axs[1,0]
+    for sample in samples["states_1"]:
+        hosps = sample[:,3]
+
+        ax.plot(hosps, alpha=0.1)
+    plt.show()
     
     #--output data
     if RETROSPECTIVE:
