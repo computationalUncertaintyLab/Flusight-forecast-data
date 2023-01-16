@@ -87,8 +87,8 @@ class comp_model_data(object):
     def split_into_seasons(self):
         #--subset to october to august
         last_season        = self.flu.loc[ (self.flu.date >= "2022-01-30") & (self.flu.date <="2022-08-01")]
-        #current_season_flu = self.flu.loc[ (self.flu.date >= "2022-09-15") ]
-        current_season_flu = self.flu.loc[ (self.flu.date >= "2022-10-15") ]
+        current_season_flu = self.flu.loc[ (self.flu.date >= "2022-09-15") ]
+        #current_season_flu = self.flu.loc[ (self.flu.date >= "2022-10-15") ]
         
 
         #--make sure that these are full weeks
@@ -191,30 +191,30 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
                 , training_data__cases            = None
                 , training_data__cases_indicators = None
                 , future = 0):
-    
+
     def one_step(carry, aray_element):
-        S,s2i,I,i2h,H,R,h2d,D = carry
-        t,beta,rho,kappa  = aray_element
+            S,s2i,I,i2h,H,R,h2d,D = carry
+            t,beta,rho,kappa      = aray_element
 
-        #rho = 0.25
+            I = I+ 1./ttl #--always infected ppl circulating in the system to allow for an outbreak
+            
+            s2i  = beta*I*S        # S->I
+            i2r  = (rho*0.25)*I    # I->R (lambda = 0.25)
+            i2h  = (rho*0.75)*I    # I->H 
+            h2d  = (kappa*0.01)*H  # H->D
+            h2r  = (kappa*0.99)*H  # H->R
 
-        s2i  = beta*I*S        # S->I
-        i2r  = (rho*0.25)*I    # I->R (lambda = 0.25)
-        i2h  = (rho*0.75)*I    # I->H 
-        h2d  = (kappa*0.01)*H  # H->D
-        h2r  = (kappa*0.99)*H  # H->R
+            nI = I + s2i - (i2r + i2h)
+            nH = H + i2h - (h2d + h2r)
+            nD = D + h2d
+            nS = S - s2i
 
-        nI = I + s2i - (i2r + i2h)
-        nH = H + i2h - (h2d + h2r)
-        nD = D + h2d
-        nS = S - s2i
+            nR = R + (i2r + h2r)
 
-        nR = R + (i2r + h2r)
+            states = jnp.vstack( (nS,s2i,nI,i2h,nH,nR,h2d,nD) )
 
-        states = jnp.array([nS,s2i,nI,i2h,nH,nR,h2d,nD] )
-
-        return states, states
-
+            return states, states
+    
     #--normalize the hosps, deaths, and cases so that they are proportions
     training_data__hosps__normalized  = training_data__hosps  / ttl
     training_data__deaths__normalized = training_data__deaths / ttl
@@ -225,6 +225,14 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     log_beta = np.repeat(params,7,axis=0) + jnp.log(0.25)
     beta     =  numpyro.deterministic("beta", jnp.exp(log_beta))
 
+    #--determine start
+    #START    = numpyro.sample( "START", dist.Gamma(1,1))
+    #beta_indices = jnp.arange(0,weekly_T*7) 
+    #beta_indices = jnp.repeat( beta_indices[:,jnp.newaxis], SEASONS, 1  )
+
+    #beta_boolean = (beta_indices >= START).astype(int)
+    #beta = beta*beta_boolean
+    
     log_rho =  jnp.log(0.25)*jnp.ones((T,SEASONS)) #numpyro.sample( "log_rho", dist.Normal( np.log(0.25)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
     rho     =  numpyro.deterministic("rho", jnp.exp(log_rho))
 
@@ -234,13 +242,8 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     #--prior for percent of population that is susceptible
     percent_sus = numpyro.sample("percent_sus", dist.Beta(0.5*20,0.5*20) )
 
-    #--when the epidemic starts
-    START = numpyro.sample( "START", dist.Uniform(0,C) )
-
-    #--cut all the data at the START point
-    indices = jnp.arange(0,C)
-    training_data__hosps__normalized = training_data__hosps__normalized[ indices > START ,:]
-    
+    phi_hosps = numpyro.sample("phi_hosps", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=prior_phis[0]*jnp.ones(2,)) )
+    phi_cases = numpyro.sample("phi_cases", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=prior_phis[1]*jnp.ones(2,)) )
 
     #--process model
     S   = jnp.zeros( (T,SEASONS) )
@@ -254,59 +257,47 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     #--fit simpler process to betafit
 
     #--Run process
-    times        = np.array([T,C])
-    weekly_times = np.array([weekly_T,weekly_C])
+    ts = jnp.arange(0,T)
 
-    phi_hosps = numpyro.sample("phi_hosps", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=prior_phis[0]*jnp.ones(2,)) )
-    phi_cases = numpyro.sample("phi_cases", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=prior_phis[1]*jnp.ones(2,)) )
+    i2h0 = training_data__hosps__normalized[0,:] 
+    H0   = training_data__hosps__normalized[0,:] 
 
-    for s in np.arange(0,SEASONS):
-        ts     = np.arange(0,times[s])
-        betas  = beta[:times[s],s]
-        kappas = kappa[:times[s],s]
-        rhos   = rho[:times[s],s]
+    I0 = training_data__cases__normalized[0,:]*(1/7)
+    S0 = (1.*percent_sus - I0)*jnp.ones(SEASONS,)
 
-        i2h0 = training_data__hosps__normalized[0,s] 
-        H0   = training_data__hosps__normalized[0,s] 
+    R0 = 0.*jnp.ones(SEASONS,)
 
-        I0 = training_data__cases__normalized[0,s]*(1/7)
-        S0 = 1.*percent_sus - I0
+    h2d0 = training_data__deaths__normalized[0,:] 
+    D0   = training_data__deaths__normalized[0,:] 
+    
+    #weekly_times = np.array([weekly_T,weekly_C])
+    #case_indicators = training_data__cases_indicators[:weekly_times[s],s]
+    
+    initial_states = jnp.vstack( (S0,I0,I0,i2h0,H0,R0,h2d0,D0))
+    
+    final, result = jax.lax.scan( one_step, initial_states, (ts,beta,rho,kappa) ) #--T by STATES by SEASONS
+    states = numpyro.deterministic("states",result)
 
-        R0 = 0.
+    modeled_hosps = numpyro.deterministic("hosps_at_day", result[:,3,:]*ttl) #-T by SEASONS
 
-        h2d0 = training_data__deaths__normalized[0,s] 
-        D0   = training_data__deaths__normalized[0,s] 
+    times = jnp.array([T,C])
 
-        case_indicators = training_data__cases_indicators[:weekly_times[s],s]
-
-        initial_states = jnp.array([S0,I0,I0,i2h0,H0,R0,h2d0,D0])
-        final, result = jax.lax.scan( one_step, initial_states, (ts,betas,rhos,kappas) )
-        
-        states = numpyro.deterministic("states_{:d}".format(s),result)
-
-        #--observations are assumed to be generated from a negative binomial
-        s2i__vals = numpyro.deterministic("s2i__vals_{:d}".format(s), jnp.clip(result[:,1], 1*10**-10, jnp.inf))
-        i2h__vals = numpyro.deterministic("i2h__vals_{:d}".format(s), jnp.clip(result[:,3], 1*10**-10, jnp.inf))
-        h2d__vals = numpyro.deterministic("h2d__vals_{:d}".format(s), jnp.clip(result[:,6], 1*10**-10, jnp.inf))
-
-        #--LIKELIHOODS
-
-        #--likelihood for hosps
-        modeled_hosps = numpyro.deterministic("hosps_at_day_{:d}".format(s), i2h__vals*ttl)
-
-        ll_hosps  = numpyro.sample("LL_H_{:d}".format(s), dist.NegativeBinomial2(i2h__vals*ttl, phi_hosps[s])
-                                   , obs = training_data__hosps[:times[s],s] )
+    ts_vec = np.repeat(ts[:,np.newaxis],2,axis=1)
+    
+    data_indices  = ts_vec < times
+    
+    ll_hosps  = numpyro.sample("LL_H", dist.NegativeBinomial2(modeled_hosps*data_indices + 10**-10, phi_hosps), obs = training_data__hosps*data_indices )
 
         #--likelihood for cases
 
         #--compute weekly sums
-        modeled_weekly_splits     = jnp.split(s2i__vals, case_indicators+1)[:-1]
-        modeled_weekly_cases      = jnp.array([sum(x) for x in modeled_weekly_splits])
+        # modeled_weekly_splits     = jnp.split(s2i__vals, case_indicators+1)[:-1]
+        # modeled_weekly_cases      = jnp.array([sum(x) for x in modeled_weekly_splits])
 
-        modeled_cases_at_week = numpyro.deterministic("cases_at_week_{:d}".format(s), modeled_weekly_cases*ttl)
+        # modeled_cases_at_week = numpyro.deterministic("cases_at_week_{:d}".format(s), modeled_weekly_cases*ttl)
 
-        ll_cases  = numpyro.sample("LL_C_{:d}".format(s), dist.NegativeBinomial2(modeled_weekly_cases*ttl, phi_cases[s])
-                                   ,obs = training_data__cases[:weekly_times[s],s] )
+        # ll_cases  = numpyro.sample("LL_C_{:d}".format(s), dist.NegativeBinomial2(modeled_weekly_cases*ttl, phi_cases[s])
+        #                            ,obs = training_data__cases[:weekly_times[s],s] )
 
     #--prediction
     if future>0:
@@ -316,7 +307,10 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
         forecast_rhos   = rho[C-1  ,SEASONS]*jnp.ones((future,))
         forecast_kappas = kappa[C-1,SEASONS]*jnp.ones((future,))
 
-        final, result = jax.lax.scan( one_step, states[C-1,:], (np.arange(0,future),forecast_betas, forecast_rhos, forecast_kappas) )
+        last_state = states[C-1,:,SEASONS]
+        last_state = last_state.reshape(-1,1)
+        
+        final, result = jax.lax.scan( one_step, last_state, (np.arange(0,future),forecast_betas, forecast_rhos, forecast_kappas) )
 
         numpyro.deterministic("forecast", result[:,3] )
 
@@ -413,26 +407,22 @@ if __name__ == "__main__":
     from jax.config import config
     config.update("jax_enable_x64", True)
 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--LOCATION'     ,type=str) 
-    # parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
-    # parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--LOCATION'     ,type=str) 
+    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
     
-    # args = parser.parse_args()
-    # LOCATION      = args.LOCATION
-    # RETROSPECTIVE = args.RETROSPECTIVE
-    # END_DATE      = args.END_DATE
-
-    LOCATION='33'
-    RETROSPECTIVE=0
-    END_DATE=0
+    args = parser.parse_args()
+    LOCATION      = args.LOCATION
+    RETROSPECTIVE = args.RETROSPECTIVE
+    END_DATE      = args.END_DATE
 
     #--MODEL DATA
     model_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=4)
 
     #--RUNNING THE MODEL
     nuts_kernel = NUTS(model)
-    mcmc        = MCMC( nuts_kernel , num_warmup=1500, num_samples=2000,progress_bar=False)
+    mcmc        = MCMC( nuts_kernel , num_warmup=1500, num_samples=2000,progress_bar=True)#False)
     rng_key     = random.PRNGKey(0)
 
     def model_run(mcmc, prior_param, prior_phis, model_data):
@@ -475,58 +465,80 @@ if __name__ == "__main__":
 
     score_crossval = lambda P,Q: score_over_params(P,Q,model_data) 
     
-    # if LOCATION == "US":
-    #     combos = [x for x in itertools.product(np.linspace(0.005,0.3,30),[1000], [1000])]
-    # else:
-    #     combos = [x for x in itertools.product(np.linspace(0.001,0.5,100),[1000], [1000])]
-    # results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
-    # results = sorted(results)
+    if LOCATION == "US":
+        combos = [x for x in itertools.product(np.linspace(0.005,0.3,30),[1000], [1000])]
+    else:
+        combos = [x for x in itertools.product(np.linspace(0.001,0.5,100),[1000], [1000])]
+    results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
+    results = sorted(results)
 
-    # best_beta_param, best_phis = results[0][-2:]
+    best_beta_param, best_phis = results[0][-2:]
 
-    # print(results[:20])
-    # print(best_beta_param)
-    # print(best_phis)
+    print(results[:20])
+    print(best_beta_param)
+    print(best_phis)
 
-    best_phis = [100,100]
-    best_beta_param =0.5
-    
     #--traiing complete now finish
     forecast_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=0)
     samples = model_run(mcmc,best_beta_param, best_phis, forecast_data)
     forecast = from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=model_data.S0, HOLDOUTWEEKS=0)
 
-    import matplotlib.pyplot as plt
-    fig,axs = plt.subplots(2,2)
+    # import matplotlib.pyplot as plt
+    # fig,axs = plt.subplots(2,3)
 
-    C = forecast_data.C
-    S0 = forecast_data.S0
+    # C = forecast_data.C
+    # S0 = forecast_data.S0
     
-    observed_hosps = forecast_data.training_data__hosps[:C,-1]
-    infered_hosps  = samples["hosps_at_day_1"].mean(0)
+    # #--current seasons
+    # observed_hosps = forecast_data.training_data__hosps[:C,-1]
+    # infered_hosps  = samples["hosps_at_day"].mean(0)[:C,-1]
     
-    domain = np.arange(0,C)
+    # domain = np.arange(0,C)
 
-    ax = axs[0,0]
+    # ax = axs[0,0]
     
-    ax.scatter(domain, observed_hosps, color = "k")
-    ax.plot(   domain, infered_hosps    , color = "r" )
+    # ax.scatter(domain, observed_hosps,s=5, color = "k")
+    # ax.plot(   domain, infered_hosps    , color = "r" )
 
-    forecast_horizon = np.arange(C,C+28)
-    forecast = samples["forecast"].mean(0)
+    # forecast_horizon = np.arange(C,C+28)
+    # forecast = samples["forecast"].mean(0)
     
-    ax.plot(forecast_horizon, forecast*S0, color = "blue", ls = "--")
+    # ax.plot(forecast_horizon, forecast*S0, color = "blue", ls = "--")
 
-    ax = axs[0,1]
-    beta_trajectory  = samples["beta"].mean(0)[:,-1]
-    ax.plot( beta_trajectory )
+    # ax = axs[0,1]
+    # beta_trajectory  = samples["beta"].mean(0)[:,-1]
+    # ax.plot( beta_trajectory )
+    # ax.axhline(0.25, color="black")
 
-    ax = axs[1,0]
-    for sample in samples["states_1"]:
-        hosps = sample[:,3]
+    # ax = axs[0,2]
+    # for sample in samples["states"]:
+    #     hosps = sample[:,3,-1]
+    #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
 
-        ax.plot(hosps, alpha=0.1)
-    plt.show()
+
+    # #--last season
+    # T = forecast_data.T
+    # observed_hosps = forecast_data.training_data__hosps[:T,0]
+    # infered_hosps  = samples["hosps_at_day"].mean(0)[:T,0]
+    
+    # domain = np.arange(0,T)
+
+    # ax = axs[1,0]
+    
+    # ax.scatter(domain, observed_hosps,s=5, color = "k")
+    # ax.plot(   domain, infered_hosps    , color = "r" )
+
+    # ax = axs[1,1]
+    # beta_trajectory  = samples["beta"].mean(0)[:,0]
+    # ax.plot( beta_trajectory )
+    # ax.axhline(0.25, color="black")
+
+    # ax = axs[1,2]
+    # for sample in samples["states"]:
+    #     hosps = sample[:,3,0]
+    #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
+
+    # plt.show()
     
     #--output data
     if RETROSPECTIVE:
