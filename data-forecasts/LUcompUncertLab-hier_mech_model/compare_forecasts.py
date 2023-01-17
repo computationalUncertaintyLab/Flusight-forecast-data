@@ -33,8 +33,8 @@ if __name__ == "__main__":
 
     locations_pieces = np.array_split(sorted(locname2loc),6)
 
-    time = "2023-01-09"
-    models = ["../GT-FluFNP/", "../PSI-DICE/", "../UMass-trends_ensemble/","SGroup-RandomForest/","../CMU-TimeSeries/"]
+    time = "2023-01-16"
+    models = ["../GT-FluFNP/", "../PSI-DICE/", "../UMass-gbq/","../CMU-TimeSeries/"]
     
     for location_names in locations_pieces:
         locations = [ locname2loc[name] for name in location_names]

@@ -225,14 +225,6 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     log_beta = np.repeat(params,7,axis=0) + jnp.log(0.25)
     beta     =  numpyro.deterministic("beta", jnp.exp(log_beta))
 
-    #--determine start
-    #START    = numpyro.sample( "START", dist.Gamma(1,1))
-    #beta_indices = jnp.arange(0,weekly_T*7) 
-    #beta_indices = jnp.repeat( beta_indices[:,jnp.newaxis], SEASONS, 1  )
-
-    #beta_boolean = (beta_indices >= START).astype(int)
-    #beta = beta*beta_boolean
-    
     log_rho =  jnp.log(0.25)*jnp.ones((T,SEASONS)) #numpyro.sample( "log_rho", dist.Normal( np.log(0.25)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
     rho     =  numpyro.deterministic("rho", jnp.exp(log_rho))
 
@@ -422,7 +414,7 @@ if __name__ == "__main__":
 
     #--RUNNING THE MODEL
     nuts_kernel = NUTS(model)
-    mcmc        = MCMC( nuts_kernel , num_warmup=1500, num_samples=2000,progress_bar=True)#False)
+    mcmc        = MCMC( nuts_kernel , num_warmup=1500, num_samples=2000,progress_bar=False)
     rng_key     = random.PRNGKey(0)
 
     def model_run(mcmc, prior_param, prior_phis, model_data):
@@ -483,6 +475,13 @@ if __name__ == "__main__":
     samples = model_run(mcmc,best_beta_param, best_phis, forecast_data)
     forecast = from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=model_data.S0, HOLDOUTWEEKS=0)
 
+    #--output data
+    if RETROSPECTIVE:
+        forecast.to_csv("./retrospective_analysis/location_{:s}_end_{:s}.csv".format(LOCATION,END_DATE),index=False)
+    else:
+        forecast.to_csv("./forecasts/location__{:s}.csv".format(LOCATION),index=False)
+
+
     # import matplotlib.pyplot as plt
     # fig,axs = plt.subplots(2,3)
 
@@ -539,9 +538,3 @@ if __name__ == "__main__":
     #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
 
     # plt.show()
-    
-    #--output data
-    if RETROSPECTIVE:
-        forecast.to_csv("./retrospective_analysis/location_{:s}_end_{:s}.csv".format(LOCATION,END_DATE),index=False)
-    else:
-        forecast.to_csv("./forecasts/location__{:s}.csv".format(LOCATION),index=False)
