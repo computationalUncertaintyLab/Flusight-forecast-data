@@ -485,19 +485,19 @@ if __name__ == "__main__":
     from jax.config import config
     config.update("jax_enable_x64", True)
 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--LOCATION'     ,type=str) 
-    # parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
-    # parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--LOCATION'     ,type=str) 
+    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
     
-    # args = parser.parse_args()
-    # LOCATION      = args.LOCATION
-    # RETROSPECTIVE = args.RETROSPECTIVE
-    # END_DATE      = args.END_DATE
+    args = parser.parse_args()
+    LOCATION      = args.LOCATION
+    RETROSPECTIVE = args.RETROSPECTIVE
+    END_DATE      = args.END_DATE
 
-    LOCATION = '42'
-    RETROSPECTIVE=0
-    END_DATE=0
+    # LOCATION = '42'
+    # RETROSPECTIVE=0
+    # END_DATE=0
 
     #--MODEL DATA
     model_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=4)
