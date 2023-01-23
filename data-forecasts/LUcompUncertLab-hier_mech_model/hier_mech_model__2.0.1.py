@@ -419,7 +419,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     
     week_indices  = weekly_vec < weekly_times
  
-    #ll_cases  = numpyro.sample("LL_C", dist.NegativeBinomial2(modeled_weekly_cases*week_indices+ 10**-10, phi_cases) ,obs = training_data__cases*week_indices )
+    ll_cases  = numpyro.sample("LL_C", dist.NegativeBinomial2(modeled_weekly_cases*week_indices+ 10**-10, phi_cases) ,obs = training_data__cases*week_indices )
 
     #--prediction
     if future>0:
