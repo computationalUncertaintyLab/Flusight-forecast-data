@@ -337,7 +337,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     #seasons = jnp.ones(SEASONS,)
     #percent_sus = numpyro.sample("percent_sus", dist.Beta(0.5*20*seasons ,0.5*20*seasons) )
 
-    nu = numpyro.sample( "nu", dist.Gamma(1.,1.) )
+    #nu = numpyro.sample( "nu", dist.Gamma(1.,1.) )
     percent_sus = numpyro.sample("percent_sus", dist.Beta(nu*jnp.ones(SEASONS,),0.75*20*jnp.ones(SEASONS,) ))
 
     #percent_hosp = numpyro.sample("percent_hosp", dist.Beta(omega*100*jnp.ones(SEASONS,), 1.*100*jnp.ones(SEASONS,) )) 
