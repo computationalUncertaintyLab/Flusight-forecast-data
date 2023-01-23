@@ -274,30 +274,43 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
     def rkstep(carry,beta_sigma_rho_kappa):
         def evolution(states,t,params):
-            s,e,i,h,r,d,c2,c = states
+            #s,e,i,h,r,d,c2,c = states
+            s,i,h,r,d,c2,c = states
+            
             beta,sigma,rho,kappa,pct_hosp = params
 
+            #e+=0.2/ttl
             i+=0.2/ttl
+            pct_hosp = 0.80
             
+            #--SEIR
+            # ds_dt = -beta*i*s
+            # de_dt = beta*i*s - sigma*e
+            # di_dt = sigma*e - i*(rho*pct_hosp + rho*(1-pct_hosp))
+            # dh_dt = i*rho**pct_hosp - h*(kappa*0.01 + kappa*0.99)
+            # dr_dt = h*kappa*0.99 + i*rho*(1-pct_hosp)
+            # dd_dt = h*kappa*0.01
+
+            #--SIR
             ds_dt = -beta*i*s
-            de_dt = beta*i*s - sigma*e
-            di_dt = sigma*e - i*(rho*pct_hosp + rho*(1-pct_hosp))
+            di_dt = beta*i*s - i*(rho*pct_hosp + rho*(1-pct_hosp))
             dh_dt = i*rho**pct_hosp - h*(kappa*0.01 + kappa*0.99)
             dr_dt = h*kappa*0.99 + i*rho*(1-pct_hosp)
             dd_dt = h*kappa*0.01
-
-            dc_dt  = i*rho*pct_hosp #--to keep track of hosps
-            dc2_dt = sigma*e        #--to keep track of cases
             
-            return jnp.stack([ds_dt, de_dt, di_dt, dh_dt, dr_dt, dd_dt, dc2_dt, dc_dt])
-        
+            dc_dt  = i*rho*pct_hosp #--to keep track of hosps
+
+            #--SIR
+            dc2_dt = beta*i*s        #--to keep track of cases
+
+            #--SEIR
+            #dc2_dt = sigma*e        #--to keep track of cases
+            
+            #return jnp.stack([ds_dt, de_dt, di_dt, dh_dt, dr_dt, dd_dt, dc2_dt, dc_dt])
+            return jnp.stack([ds_dt, di_dt, dh_dt, dr_dt, dd_dt, dc2_dt, dc_dt])
+            
         last_states = carry
 
-        def grab_params(t, beta_sigma_rho_kappa):
-            return beta_sigma_rho_kappa[t.astype(int),:]
-
-        grab = lambda t: grab_params(t,beta_sigma_rho_kappa)
-        
         states = odeint(evolution, last_states , jnp.array([0.,1.]), beta_sigma_rho_kappa, rtol=1e-6, atol=1e-5, mxstep=100)
         next_state = states[-1,:,:]
 
@@ -333,16 +346,21 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     log_kappa =  jnp.log(0.05)*jnp.ones((T,SEASONS))
     kappa     =  numpyro.deterministic("kappa", jnp.exp(log_kappa))
 
-    log_sigma =  jnp.log(0.5)*jnp.ones((T,SEASONS))
-    sigma     =  numpyro.deterministic("sigma", jnp.exp(log_kappa))
+    #log_sigma = numpyro.sample("param_for_sigma", dist.Normal(0.*jnp.ones( (T,SEASONS) ) , 1.*jnp.ones( (T,SEASONS) ) ))
+    log_sigma =  jnp.log(0.4)*jnp.ones((T,SEASONS))
+    sigma     =  numpyro.deterministic("sigma", jnp.exp(log_sigma))
 
     #--prior for percent of population that is susceptible
-    nu = numpyro.sample( "nu", dist.Gamma(1.,1.) )
-    percent_sus = numpyro.sample("percent_sus", dist.Beta(nu*jnp.ones(SEASONS,),0.75*20*jnp.ones(SEASONS,) ))   
+    #nu = numpyro.sample( "nu", dist.Gamma(1.,1.) )
+    #percent_sus = numpyro.sample("percent_sus", dist.Beta(nu*jnp.ones(SEASONS,),0.75*20*jnp.ones(SEASONS,) ))
 
-    #omega = numpyro.sample( "omega", dist.Gamma( (1./0.1)*(1./100), (1./0.1)*(1.) ) )
+    seasons = jnp.ones(SEASONS,)
+    percent_sus = numpyro.sample("percent_sus", dist.Beta(0.5*20*seasons ,0.5*20*seasons) )
+    
 
-    omega = 0.01
+    omega = numpyro.sample( "omega", dist.Gamma( 1.,1. ) )
+
+    #omega = 0.02
     percent_hosp = numpyro.sample("percent_hosp", dist.Beta(omega*100*jnp.ones(SEASONS,), 1.*100*jnp.ones(SEASONS,) )) 
     percent_hosp = jnp.repeat(percent_hosp[jnp.newaxis],T,0)
     
@@ -353,7 +371,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     days  = jnp.arange(0,T)
     weeks = jnp.arange(0,weekly_T)
     
-    E0 = training_data__cases__normalized[0,:]*(1/7)
+    E0 = training_data__cases__normalized[0,:]*(1/7) + 2./ttl
     I0 = training_data__cases__normalized[0,:]*(1/7)
     R0 = 0.*jnp.ones(SEASONS,)
     H0 = training_data__hosps__normalized[0,:]  
@@ -361,16 +379,12 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
     S0 = (1.*percent_sus - I0)*jnp.ones(SEASONS,)
 
-    #case_indicators = training_data__cases_indicators[:weekly_times[s],s]
+    #initial_states = jnp.vstack( (S0,E0,I0,H0,R0,D0,  I0,H0) )
+    initial_states = jnp.vstack( (S0,I0,H0,R0,D0,  I0,H0) )
     
-    initial_states = jnp.vstack( (S0,E0,I0,H0,R0,D0,  I0,H0) )
-    
-    beta_sigma_rho_kappa = jnp.stack([beta, sigma, rho, kappa, percent_hosp])
+    beta_sigma_rho_kappa = jnp.stack([beta, sigma, rho, kappa,percent_hosp])
     beta_sigma_rho_kappa = np.rollaxis(beta_sigma_rho_kappa,1)
 
-    #grab = lambda t: grab_params(t,beta_rho_kappa)
-    #result = odeint(evolution, initial_states , jnp.arange(0.,T), rtol=1e-6, atol=1e-5, mxstep=1000)
-    
     fnl,result     = jax.lax.scan(rkstep, initial_states, beta_sigma_rho_kappa )
     states = numpyro.deterministic("states",result)
 
@@ -405,11 +419,11 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     
     week_indices  = weekly_vec < weekly_times
  
-    ll_cases  = numpyro.sample("LL_C", dist.NegativeBinomial2(modeled_weekly_cases*week_indices+ 10**-10, phi_cases) ,obs = training_data__cases )
+    #ll_cases  = numpyro.sample("LL_C", dist.NegativeBinomial2(modeled_weekly_cases*week_indices+ 10**-10, phi_cases) ,obs = training_data__cases*week_indices )
 
     #--prediction
     if future>0:
-        numpyro.deterministic("forecast", modeled_hosps[C:C+28,-1])
+        numpyro.deterministic("forecast", modeled_hosps[C-1:C+28-1,-1])
 
 def from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=0,HOLDOUTWEEKS=0):
     from datetime import datetime, timedelta
@@ -470,7 +484,6 @@ def from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=0,HOLDOUTWEEKS=0):
     else:
         target_end_dates = [ (datetime.strptime(x,"%Y-%m-%d") - timedelta(weeks=HOLDOUTWEEKS)).strftime("%Y-%m-%d") for x in target_end_dates]
     
-    
     #--store all forecasts in a DataFrame
     forecast = {"target":[], "target_end_date":[], "quantile":[], "value":[]}
     for n,week_ahead_prediction in enumerate(quantiles.T):
@@ -492,7 +505,6 @@ def from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=0,HOLDOUTWEEKS=0):
     #--format values to three decimals
     forecast['value'] = ["{:0.3f}".format(q) for q in forecast["value"]]
 
-
     return forecast
 
 if __name__ == "__main__":
@@ -512,7 +524,7 @@ if __name__ == "__main__":
     # RETROSPECTIVE = args.RETROSPECTIVE
     # END_DATE      = args.END_DATE
 
-    LOCATION = '38'
+    LOCATION = '42'
     RETROSPECTIVE = 0
     END_DATE=0
     
@@ -573,7 +585,7 @@ if __name__ == "__main__":
 
     #best_beta_param, best_phis = results[0][-2:]
 
-    best_beta_param  = 1.5
+    best_beta_param  = 1.0
     best_phis = [1./10,1./10]
 
     # print(results[:20])
@@ -582,8 +594,8 @@ if __name__ == "__main__":
 
     #--traiing complete now finish
     forecast_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=0)
-    samples = model_run(mcmc,best_beta_param, best_phis, forecast_data)
-    forecast = from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=model_data.S0, HOLDOUTWEEKS=0)
+    samples       = model_run(mcmc,best_beta_param, best_phis, forecast_data)
+    forecast      = from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=forecast_data.S0, HOLDOUTWEEKS=0)
 
     #--output data
     if RETROSPECTIVE:
@@ -653,7 +665,7 @@ if __name__ == "__main__":
 
 
 
-    # training_data__hosps  = forecast_data.training_data__hosps
+    
     # training_data__cases  = forecast_data.training_data__ili
     # training_data__deaths = forecast_data.training_data__deaths
 
