@@ -89,8 +89,87 @@ class comp_model_data(object):
         #--subset to october to august
         last_season        = self.flu.loc[ (self.flu.date >= "2022-01-30") & (self.flu.date <="2022-08-01")]
         current_season_flu = self.flu.loc[ (self.flu.date >= "2022-09-15") ]
-        #current_season_flu = self.flu.loc[ (self.flu.date >= "2022-10-15") ]
+
+        #--add abbreviation and loation name
+        self.abb = last_season.iloc[0]["abbreviation"]
+        self.location_name = last_season.iloc[0]["location_name"]
         
+        #--enumerate all days in all weeks
+        def enumerate_days(start,end, S0, LOCATION, abb, location_name, data):
+            from epiweeks import Week
+            from datetime import datetime, timedelta
+            
+            week, end = Week.fromstring( str(start)), Week.fromstring( str(end))
+
+            days = {"date":[]
+                    ,"location":[]
+                    ,"population":[]
+                    ,"hosps":[]
+                    ,"deaths":[]
+                    ,"yr":[]
+                    ,"week":[]
+                    ,"ew":[]
+                    ,"month":[]
+                    ,"day":[]
+                    ,"start_date":[]
+                    ,"end_date":[]
+                    ,"location_name":[]
+                    ,"abbreviation":[]
+                    ,"numili":[]
+                    ,"count_rate1per100k":[]
+                    ,"count_rate2per100k":[]
+                    ,"Y":[], "W":[]
+                    ,"cdcformat":[]}
+
+            population = S0
+            location   = LOCATION
+            
+            while week < end:
+                day = week.startdate()
+                startdate = week.startdate()
+                enddate   = week.enddate()
+                for _ in range(7):
+                    date = day.strftime("%Y-%m-%d")
+                    days["date"].append(date)
+
+                    days["location"].append(location)
+                    days["population"].append(population)
+
+
+                    try:
+                        days["hosps"].append( float(data.loc[data.date==date,"hosps"].values) )
+                        days["deaths"].append( float(data.loc[data.date==date,"deaths"].values) )
+                        days["numili"].append( float(data.loc[data.date==date,"numili"].values))
+                    except:
+                        days["hosps"].append(0.)
+                        days["deaths"].append(0.)
+                        days["numili"].append(0.)
+                        
+                    days["yr"].append(day.year)
+                    days["week"].append(week.week)
+                    days["ew"].append("{:04d}{:02d}".format(day.year,week.week) )
+                    days["month"].append(day.month)
+                    days["day"].append(day.day)
+                    days["start_date"].append( startdate.strftime("%Y-%m-%d")  )
+                    days["end_date"].append( enddate.strftime("%Y-%m-%d")  )
+
+                    days["location_name"].append(location_name)
+                    days["abbreviation"].append(abb)
+
+
+                    days["count_rate1per100k"].append(0.)
+                    days["count_rate2per100k"].append(0.)
+
+                    days["Y"].append(float(day.year))
+                    days["W"].append(float(week.week))
+
+                    days["cdcformat"].append(float(week.cdcformat()))
+
+                    day = day + timedelta(days=1)
+                week+=1
+            return pd.DataFrame(days)
+        last_season    = enumerate_days(last_season.cdcformat.min(), last_season.cdcformat.max()   , self.S0, self.LOCATION, self.abb, self.location_name, last_season)
+        current_season_flu = enumerate_days(current_season_flu.cdcformat.min(), current_season_flu.cdcformat.max(), self.S0, self.LOCATION, self.abb, self.location_name, current_season_flu)
 
         #--make sure that these are full weeks
         def week_check(x):
@@ -100,8 +179,8 @@ class comp_model_data(object):
         current_season_flu = current_season_flu.groupby(["ew"]).apply(week_check).reset_index(drop=True)
 
         #--attach training
-        self.last_season        = last_season#.iloc#[:-HOLDOUTWEEKS,:]
-        self.current_season_flu = current_season_flu#.iloc#[:-HOLDOUTWEEKS,:]
+        self.last_season        = last_season
+        self.current_season_flu = current_season_flu
 
     def prepare_training_data(self):
        
@@ -193,72 +272,37 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
                 , training_data__cases_indicators = None
                 , future = 0):
 
-    def one_step(carry, aray_element):
-            S,s2i,I,i2h,H,R,h2d,D = carry
-            t,beta,rho,kappa      = aray_element
-
-            I = I+ 1./ttl #--always infected ppl circulating in the system to allow for an outbreak
-            
-            s2i  = beta*I*S        # S->I
-            i2r  = (rho*0.25)*I    # I->R (lambda = 0.25)
-            i2h  = (rho*0.75)*I    # I->H 
-            h2d  = (kappa*0.01)*H  # H->D
-            h2r  = (kappa*0.99)*H  # H->R
-
-            nI = I + s2i - (i2r + i2h)
-            nH = H + i2h - (h2d + h2r)
-            nD = D + h2d
-            nS = S - s2i
-
-            nR = R + (i2r + h2r)
-
-            states = jnp.vstack( (nS,s2i,nI,i2h,nH,nR,h2d,nD) )
-
-            return states, states
-
-    def rkstep(carry,beta_rho_kappa):
+    def rkstep(carry,beta_sigma_rho_kappa):
         def evolution(states,t,params):
-            s,i,h,r,d,_ = states
-            beta,rho,kappa = params
+            s,e,i,h,r,d,c2,c = states
+            beta,sigma,rho,kappa,pct_hosp = params
+
+            i+=0.2/ttl
             
             ds_dt = -beta*i*s
-            di_dt = beta*i*s - i*(rho*0.25 + rho*0.75)
-            dh_dt = i*rho*0.75 - h*(kappa*0.01 + kappa*0.99)
-            dr_dt = h*kappa*0.99 + i*rho*0.25
+            de_dt = beta*i*s - sigma*e
+            di_dt = sigma*e - i*(rho*pct_hosp + rho*(1-pct_hosp))
+            dh_dt = i*rho**pct_hosp - h*(kappa*0.01 + kappa*0.99)
+            dr_dt = h*kappa*0.99 + i*rho*(1-pct_hosp)
             dd_dt = h*kappa*0.01
 
-            dc_dt = i*rho*0.75 #--to keep track
+            dc_dt  = i*rho*pct_hosp #--to keep track of hosps
+            dc2_dt = sigma*e        #--to keep track of cases
             
-            return jnp.stack([ds_dt, di_dt, dh_dt, dr_dt, dd_dt,dc_dt])
+            return jnp.stack([ds_dt, de_dt, di_dt, dh_dt, dr_dt, dd_dt, dc2_dt, dc_dt])
         
         last_states = carry
 
-        def grab_params(t, beta_rho_kappa):
-            return beta_rho_kappa[t.astype(int),:]
+        def grab_params(t, beta_sigma_rho_kappa):
+            return beta_sigma_rho_kappa[t.astype(int),:]
 
-        grab = lambda t: grab_params(t,beta_rho_kappa)
+        grab = lambda t: grab_params(t,beta_sigma_rho_kappa)
         
-        states = odeint(evolution, last_states , jnp.array([0.,1.]), beta_rho_kappa, rtol=1e-6, atol=1e-5, mxstep=1000)
+        states = odeint(evolution, last_states , jnp.array([0.,1.]), beta_sigma_rho_kappa, rtol=1e-6, atol=1e-5, mxstep=100)
         next_state = states[-1,:,:]
 
         return next_state, next_state
 
-    
-    # def evolution(states,t):
-    #     s,i,h,r,d = states
-    #     beta,rho,kappa = grab(t)
-
-    #     ds_dt = -beta*i*s
-    #     di_dt = beta*i*s - i*(rho*0.25 + rho*0.75)
-    #     dh_dt = i*rho*0.75 - h*(kappa*0.01 + kappa*0.99)
-    #     dr_dt = h*kappa*0.99 + i*rho*0.25
-    #     dd_dt = h*kappa*0.01
-
-    #     return jnp.stack([ds_dt, di_dt, dh_dt, dr_dt, dd_dt])
-
-    # def grab_params(t, beta_rho_kappa):
-    #     return beta_rho_kappa[t.astype(int),:]
-    
     #--normalize the hosps, deaths, and cases so that they are proportions
     training_data__hosps__normalized  = training_data__hosps  / ttl
     training_data__deaths__normalized = training_data__deaths / ttl
@@ -267,131 +311,105 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     weeks = jnp.arange(0,weekly_T+4).reshape(-1,1)
     ttl_weeks = weekly_T+4
     
-    days  = jnp.arange(0.,T+4*7).reshape(-1,1)
-    ttl_days = T+4*7
-    
+    days     = jnp.arange(0.,T+4*7).reshape(-1,1)
+
+    weeks_from_c_to_T = weekly_T - weekly_C
+
     #--prior for beta and set gamma to be fixed
-    params   = numpyro.sample( "beta_params", dist.Normal( jnp.zeros((ttl_weeks,SEASONS)), prior_param*jnp.ones((ttl_weeks,SEASONS)) ) )
-    log_beta = np.repeat(params,7,axis=0) + jnp.log(0.25)
+    params1   = numpyro.sample( "beta_params1", dist.Normal( jnp.zeros((weekly_C,SEASONS)), prior_param*jnp.ones((weekly_C,SEASONS)) ) )
+    params2   = numpyro.sample( "beta_params2", dist.Normal( jnp.zeros((weeks_from_c_to_T,SEASONS-1)), prior_param*jnp.ones((weeks_from_c_to_T,SEASONS-1)) ) )
+
+    last_beta_repeated = jnp.repeat(params1[-1,-1], weeks_from_c_to_T).reshape(-1,1)
+    params2 = jnp.hstack([params2, last_beta_repeated])
+
+    params = jnp.vstack([params1,params2])
+    
+    log_beta = jnp.repeat(params,7,axis=0) + jnp.log(0.25)
     beta     = numpyro.deterministic("beta", jnp.exp(log_beta))
 
-    #beta = jnp.vstack([beta[0,:], beta])
-    
-    training_beta = beta[:-28,:] 
-    
-    log_rho =  jnp.log(0.25)*jnp.ones((T,SEASONS)) #numpyro.sample( "log_rho", dist.Normal( np.log(0.25)*jnp.ones( (T,SEASONS) ) , 0.1 ) )
+    log_rho =  jnp.log(0.25)*jnp.ones((T,SEASONS)) 
     rho     =  numpyro.deterministic("rho", jnp.exp(log_rho))
-
-    #rho = jnp.vstack([rho[0,:], rho])
 
     log_kappa =  jnp.log(0.05)*jnp.ones((T,SEASONS))
     kappa     =  numpyro.deterministic("kappa", jnp.exp(log_kappa))
 
-    #kappa = jnp.vstack([kappa[0,:], kappa])
-    
-    #--prior for percent of population that is susceptible
-    percent_sus = numpyro.sample("percent_sus", dist.Beta(0.5*20,0.5*20) )
+    log_sigma =  jnp.log(0.5)*jnp.ones((T,SEASONS))
+    sigma     =  numpyro.deterministic("sigma", jnp.exp(log_kappa))
 
+    #--prior for percent of population that is susceptible
+    nu = numpyro.sample( "nu", dist.Gamma(1.,1.) )
+    percent_sus = numpyro.sample("percent_sus", dist.Beta(nu*jnp.ones(SEASONS,),0.75*20*jnp.ones(SEASONS,) ))   
+
+    #omega = numpyro.sample( "omega", dist.Gamma( (1./0.1)*(1./100), (1./0.1)*(1.) ) )
+
+    omega = 0.01
+    percent_hosp = numpyro.sample("percent_hosp", dist.Beta(omega*100*jnp.ones(SEASONS,), 1.*100*jnp.ones(SEASONS,) )) 
+    percent_hosp = jnp.repeat(percent_hosp[jnp.newaxis],T,0)
+    
     phi_hosps = numpyro.sample("phi_hosps", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=prior_phis[0]*jnp.ones(2,)) )
     phi_cases = numpyro.sample("phi_cases", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=prior_phis[1]*jnp.ones(2,)) )
 
-    #--process model
-    S   = jnp.zeros( (T,SEASONS) )
-    I   = jnp.zeros( (T,SEASONS) )
-    i2h = jnp.zeros( (T,SEASONS) ) #--incident hosps
-    H   = jnp.zeros( (T,SEASONS) )
-    R   = jnp.zeros( (T,SEASONS) )
-    h2d = jnp.zeros( (T,SEASONS) ) #--incident deaths
-    D   = jnp.zeros( (T,SEASONS) )
-
-    #--fit simpler process to betafit
-
     #--Run process
-    ts = jnp.arange(0,T)
-
-    H0   = training_data__hosps__normalized[0,:] 
+    days  = jnp.arange(0,T)
+    weeks = jnp.arange(0,weekly_T)
+    
+    E0 = training_data__cases__normalized[0,:]*(1/7)
     I0 = training_data__cases__normalized[0,:]*(1/7)
-    S0 = (1.*percent_sus - I0)*jnp.ones(SEASONS,)
     R0 = 0.*jnp.ones(SEASONS,)
-    D0   = training_data__deaths__normalized[0,:]
+    H0 = training_data__hosps__normalized[0,:]  
+    D0 = training_data__deaths__normalized[0,:]
 
-    i2h0 = training_data__hosps__normalized[0,:] 
-    h2d0 = training_data__deaths__normalized[0,:]
+    S0 = (1.*percent_sus - I0)*jnp.ones(SEASONS,)
 
-    #weekly_times = np.array([weekly_T,weekly_C])
     #case_indicators = training_data__cases_indicators[:weekly_times[s],s]
     
-    #initial_states = jnp.vstack( (S0,I0,I0,i2h0,H0,R0,h2d0,D0))
-
-    initial_states = jnp.vstack( (S0,I0,H0,R0,D0,  H0) )
+    initial_states = jnp.vstack( (S0,E0,I0,H0,R0,D0,  I0,H0) )
     
-    #final, result = jax.lax.scan( one_step, initial_states, (ts,training_beta,rho,kappa) ) #--T by STATES by SEASONS
-   
-    beta_rho_kappa = jnp.stack([training_beta, rho, kappa])
-    beta_rho_kappa = np.rollaxis(beta_rho_kappa,1)
+    beta_sigma_rho_kappa = jnp.stack([beta, sigma, rho, kappa, percent_hosp])
+    beta_sigma_rho_kappa = np.rollaxis(beta_sigma_rho_kappa,1)
 
     #grab = lambda t: grab_params(t,beta_rho_kappa)
     #result = odeint(evolution, initial_states , jnp.arange(0.,T), rtol=1e-6, atol=1e-5, mxstep=1000)
     
-    fnl,result     = jax.lax.scan(rkstep, initial_states, beta_rho_kappa )
+    fnl,result     = jax.lax.scan(rkstep, initial_states, beta_sigma_rho_kappa )
     states = numpyro.deterministic("states",result)
 
     diffs = jnp.diff(states.T,1)
 
     inc_hosps = jnp.vstack([ H0, diffs[:,-1,:].T])
+    inc_cases = jnp.vstack([ I0, diffs[:,-2,:].T])
     
-
-    #--add the initial state
-    #inc_hosps = jnp.vstack([H0,inc_hosps])
-    
+    #--multiply the proportion of inc hosps by population
     modeled_hosps = numpyro.deterministic("hosps_at_day", inc_hosps*ttl) #-T by SEASONS
     modeled_hosps = jnp.clip(modeled_hosps,0,np.inf)
 
+    modeled_cases = numpyro.deterministic("cases_at_day", inc_cases*ttl) #-T by SEASONS
+    modeled_cases = jnp.clip(modeled_cases,0,np.inf)
+    
     times = jnp.array([T,C])
-    ts_vec = np.repeat(ts[:,np.newaxis],2,axis=1)
+    days_vec = np.repeat(days[:,np.newaxis],2,axis=1)
     
-    data_indices  = ts_vec < times
+    data_indices  = days_vec < times
     
-    ll_hosps  = numpyro.sample("LL_H", dist.NegativeBinomial2(modeled_hosps*data_indices + 10**-10, phi_hosps), obs = training_data__hosps*data_indices )
+    ll_hosps  = numpyro.sample("LL_H", dist.NegativeBinomial2(modeled_hosps[:T,:]*data_indices + 10**-10, phi_hosps), obs = training_data__hosps*data_indices )
 
-        #--likelihood for cases
+    #--likelihood for cases
 
-        #--compute weekly sums
-        # modeled_weekly_splits     = jnp.split(s2i__vals, case_indicators+1)[:-1]
-        # modeled_weekly_cases      = jnp.array([sum(x) for x in modeled_weekly_splits])
+    #--compute weekly sums
+    modeled_weekly_splits     = jnp.split(modeled_cases, T/7 )
+    modeled_weekly_cases      = jnp.array([sum(x) for x in modeled_weekly_splits])
+    modeled_cases_at_week = numpyro.deterministic("cases_at_week", modeled_weekly_cases)
 
-        # modeled_cases_at_week = numpyro.deterministic("cases_at_week_{:d}".format(s), modeled_weekly_cases*ttl)
-
-        # ll_cases  = numpyro.sample("LL_C_{:d}".format(s), dist.NegativeBinomial2(modeled_weekly_cases*ttl, phi_cases[s])
-        #                            ,obs = training_data__cases[:weekly_times[s],s] )
+    weekly_times = jnp.array([weekly_T,weekly_C])
+    weekly_vec = np.repeat(weeks[:,np.newaxis],2,axis=1)
+    
+    week_indices  = weekly_vec < weekly_times
+ 
+    ll_cases  = numpyro.sample("LL_C", dist.NegativeBinomial2(modeled_weekly_cases*week_indices+ 10**-10, phi_cases) ,obs = training_data__cases )
 
     #--prediction
     if future>0:
-        forecast_betas  = numpyro.deterministic("forecast_betas", beta[-28 :,-1])
-        forecast_rhos   = numpyro.deterministic("forecast_rhos" , rho[-28  :,-1])
-        forecast_kappas = numpyro.deterministic("forecast_kappa", kappa[-28:,-1])
-
-        last_state = states[C,:,-1]
-        last_state = last_state.reshape(-1,1)
-        
-        #final, result = jax.lax.scan( one_step, last_state, (np.arange(0,future),forecast_betas, forecast_rhos, forecast_kappas) )
-
-        forecast_beta_rho_kappa = jnp.vstack([forecast_betas, forecast_rhos, forecast_kappas])
-        forecast_beta_rho_kappa = np.rollaxis(forecast_beta_rho_kappa,1)
-        
-        # grab = lambda t: grab_params(t,forecast_beta_rho_kappa)
-        # result = odeint(evolution, initial_states , jnp.arange(0.,28), rtol=1e-6, atol=1e-5, mxstep=1000)
-
-        #print(last_state.shape)
-        #print(forecast_beta_rho_kappa.shape)
-        fnl,result     = jax.lax.scan(rkstep, last_state, forecast_beta_rho_kappa )
-
-        diffs = jnp.diff(result.T,1)
-        #print(diffs.shape)
-        
-        inc_hosps = jnp.vstack([ last_state, diffs[:,-1,:].T])
- 
-        numpyro.deterministic("forecast", inc_hosps )
+        numpyro.deterministic("forecast", modeled_hosps[C:C+28,-1])
 
 def from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=0,HOLDOUTWEEKS=0):
     from datetime import datetime, timedelta
@@ -401,7 +419,7 @@ def from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=0,HOLDOUTWEEKS=0):
         for time,value in enumerate(values):
             predictions['t'].append(time)
             predictions['sample'].append(sample)
-            predictions['value'].append(value*S0)
+            predictions['value'].append(value)
     predictions = pd.DataFrame(predictions)
  
     weekly_agg = {"t":[],"wk":[]}
@@ -477,8 +495,6 @@ def from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=0,HOLDOUTWEEKS=0):
 
     return forecast
 
-        
-
 if __name__ == "__main__":
 
     numpyro.enable_x64(True)
@@ -496,8 +512,7 @@ if __name__ == "__main__":
     # RETROSPECTIVE = args.RETROSPECTIVE
     # END_DATE      = args.END_DATE
 
-
-    LOCATION = '42'
+    LOCATION = '38'
     RETROSPECTIVE = 0
     END_DATE=0
     
@@ -558,7 +573,7 @@ if __name__ == "__main__":
 
     #best_beta_param, best_phis = results[0][-2:]
 
-    best_beta_param  = 1.0
+    best_beta_param  = 1.5
     best_phis = [1./10,1./10]
 
     # print(results[:20])
@@ -593,10 +608,13 @@ if __name__ == "__main__":
     ax.scatter(domain, observed_hosps,s=5, color = "k")
     ax.plot(   domain, infered_hosps    , color = "r" )
 
-    forecast_horizon = np.arange(C,C+28)
-    forecast = samples["forecast"].mean(0)
     
-    ax.plot(forecast_horizon, forecast*S0, color = "blue", ls = "--")
+    forecast = samples["forecast"].mean(0)
+    forecast_horizon = np.arange(C,C+len(forecast))
+
+    print(forecast_horizon)
+    
+    ax.plot(forecast_horizon, forecast, color = "blue", ls = "--")
 
     ax = axs[0,1]
     beta_trajectory  = samples["beta"].mean(0)[:,-1]
@@ -626,10 +644,10 @@ if __name__ == "__main__":
     ax.plot( beta_trajectory )
     ax.axhline(0.25, color="black")
 
-    ax = axs[1,2]
-    for sample in samples["states"]:
-        hosps = sample[:,3,0]
-        ax.plot(hosps, alpha=0.1, color="black",lw=1)
+    # ax = axs[1,2]
+    # for sample in samples["states"]:
+    #     hosps = sample[:,3,0]
+    #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
 
     plt.show()
 
@@ -649,3 +667,49 @@ if __name__ == "__main__":
 
 
     
+    # def rkstep(carry,beta_sigma_rho_kappa):
+    #     def evolution(states,t,params):
+    #         s,e,i,h,r,d,_ = states
+    #         beta,sigma,rho,kappa = params
+
+    #         i+=0.2/ttl
+            
+    #         ds_dt = -beta*i*s
+    #         de_dt = beta*i*s - sigma*e
+    #         di_dt = sigma*e - i*(rho*0.25 + rho*0.75)
+    #         dh_dt = i*rho*0.75 - h*(kappa*0.01 + kappa*0.99)
+    #         dr_dt = h*kappa*0.99 + i*rho*0.25
+    #         dd_dt = h*kappa*0.01
+
+    #         dc_dt = i*rho*0.75 #--to keep track
+            
+    #         return jnp.stack([ds_dt, de_dt, di_dt, dh_dt, dr_dt, dd_dt,dc_dt])
+        
+    #     last_states = carry
+
+    #     def grab_params(t, beta_sigma_rho_kappa):
+    #         return beta_sigma_rho_kappa[t.astype(int),:]
+
+    #     grab = lambda t: grab_params(t,beta_sigma_rho_kappa)
+        
+    #     states = odeint(evolution, last_states , jnp.array([0.,1.]), beta_sigma_rho_kappa, rtol=1e-6, atol=1e-5, mxstep=100)
+    #     next_state = states[-1,:,:]
+
+    #     return next_state, next_state
+
+    
+    # def evolution(states,t):
+    #     s,i,h,r,d = states
+    #     beta,rho,kappa = grab(t)
+
+    #     ds_dt = -beta*i*s
+    #     di_dt = beta*i*s - i*(rho*0.25 + rho*0.75)
+    #     dh_dt = i*rho*0.75 - h*(kappa*0.01 + kappa*0.99)
+    #     dr_dt = h*kappa*0.99 + i*rho*0.25
+    #     dd_dt = h*kappa*0.01
+
+    #     return jnp.stack([ds_dt, di_dt, dh_dt, dr_dt, dd_dt])
+
+    # def grab_params(t, beta_rho_kappa):
+    #     return beta_rho_kappa[t.astype(int),:]
+ 
