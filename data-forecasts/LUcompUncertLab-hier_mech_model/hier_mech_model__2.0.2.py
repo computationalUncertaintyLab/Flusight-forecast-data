@@ -321,7 +321,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
     params = jnp.vstack([params1,params2])
     
-    log_beta = jnp.repeat(params,7,axis=0) + jnp.log(0.25)
+    log_beta = jnp.repeat(params,7,axis=0) + jnp.log(1./7)
     beta     = numpyro.deterministic("beta", jnp.exp(log_beta))
 
     log_rho =  jnp.log(1./7)*jnp.ones((T,SEASONS)) 
@@ -330,7 +330,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     log_kappa =  jnp.log(0.05)*jnp.ones((T,SEASONS))
     kappa     =  numpyro.deterministic("kappa", jnp.exp(log_kappa))
 
-    log_sigma =  jnp.log(0.50)*jnp.ones((T,SEASONS))
+    log_sigma =  jnp.log(0.05)*jnp.ones((T,SEASONS))
     sigma     =  numpyro.deterministic("sigma", jnp.exp(log_sigma))
 
     #--prior for percent of population that is susceptible
@@ -339,7 +339,10 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
     nu = numpyro.sample( "nu", dist.Gamma(1.,1.) )
     percent_sus = numpyro.sample("percent_sus", dist.Beta(nu*jnp.ones(SEASONS,),0.75*20*jnp.ones(SEASONS,) ))
-    
+
+    #percent_hosp = numpyro.sample("percent_hosp", dist.Beta(omega*100*jnp.ones(SEASONS,), 1.*100*jnp.ones(SEASONS,) )) 
+    #percent_hosp = jnp.repeat(percent_hosp[jnp.newaxis],T,0)
+ 
     phi_hosps = numpyro.sample("phi_hosps", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=prior_phis[0]*jnp.ones(2,)) )
     phi_cases = numpyro.sample("phi_cases", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=prior_phis[1]*jnp.ones(2,)) )
 
@@ -364,6 +367,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     states = numpyro.deterministic("states",result)
 
     modeled_hosps = numpyro.deterministic("hosps_at_day", result[:,-1,:]*ttl) #-T by SEASONS
+    modeled_cases = numpyro.deterministic("cases_at_day", result[:,-2,:]*ttl) #-T by SEASONS
 
     times = jnp.array([T,C])
 
@@ -376,16 +380,16 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     #--likelihood for cases
 
     #--compute weekly sums
-    modeled_weekly_splits     = jnp.split(modeled_cases, T/7 )
-    modeled_weekly_cases      = jnp.array([sum(x) for x in modeled_weekly_splits])
-    modeled_cases_at_week = numpyro.deterministic("cases_at_week", modeled_weekly_cases)
+    # modeled_weekly_splits     = jnp.split(modeled_cases, T/7 )
+    # modeled_weekly_cases      = jnp.array([sum(x) for x in modeled_weekly_splits])
+    # modeled_cases_at_week = numpyro.deterministic("cases_at_week", modeled_weekly_cases)
 
-    weekly_times = jnp.array([weekly_T,weekly_C])
-    weekly_vec = np.repeat(weeks[:,np.newaxis],2,axis=1)
+    # weekly_times = jnp.array([weekly_T,weekly_C])
+    # weekly_vec = np.repeat(weeks[:,np.newaxis],2,axis=1)
     
-    week_indices  = weekly_vec < weekly_times
+    # week_indices  = weekly_vec < weekly_times
  
-    ll_cases  = numpyro.sample("LL_C", dist.NegativeBinomial2(modeled_weekly_cases*week_indices+ 10**-10, phi_cases) ,obs = training_data__cases*week_indices )
+    # ll_cases  = numpyro.sample("LL_C", dist.NegativeBinomial2(modeled_weekly_cases*week_indices+ 10**-10, phi_cases) ,obs = training_data__cases*week_indices )
 
     #--prediction
     if future>0:
@@ -399,7 +403,7 @@ def from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=0,HOLDOUTWEEKS=0):
         for time,value in enumerate(values):
             predictions['t'].append(time)
             predictions['sample'].append(sample)
-            predictions['value'].append(value*S0)
+            predictions['value'].append(value)
     predictions = pd.DataFrame(predictions)
  
     weekly_agg = {"t":[],"wk":[]}
@@ -481,26 +485,26 @@ if __name__ == "__main__":
     from jax.config import config
     config.update("jax_enable_x64", True)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--LOCATION'     ,type=str) 
-    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
-    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--LOCATION'     ,type=str) 
+    # parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    # parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
     
-    args = parser.parse_args()
-    LOCATION      = args.LOCATION
-    RETROSPECTIVE = args.RETROSPECTIVE
-    END_DATE      = args.END_DATE
+    # args = parser.parse_args()
+    # LOCATION      = args.LOCATION
+    # RETROSPECTIVE = args.RETROSPECTIVE
+    # END_DATE      = args.END_DATE
 
-    # LOCATION = '42'
-    # RETROSPECTIVE=0
-    # END_DATE=0
+    LOCATION = '42'
+    RETROSPECTIVE=0
+    END_DATE=0
 
     #--MODEL DATA
     model_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=4)
 
     #--RUNNING THE MODEL
     nuts_kernel = NUTS(model)
-    mcmc        = MCMC( nuts_kernel , num_warmup=1500, num_samples=2000,progress_bar=True)
+    mcmc        = MCMC( nuts_kernel , num_warmup=1250, num_samples=2000,progress_bar=True)
     rng_key     = random.PRNGKey(0)
 
     def model_run(mcmc, prior_param, prior_phis, model_data):

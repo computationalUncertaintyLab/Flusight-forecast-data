@@ -18,6 +18,7 @@ if __name__ == "__main__":
     model_name = collect_model_name()
     
     forecasts = pd.read_csv("{:s}-{:s}.csv".format(monday_submission,model_name))
+    forecasts["location"] = ["{:02d}".format(location) for location in forecasts.location.values]
 
     truths    = pd.read_csv("../../data-truth/truth-Incident Hospitalizations.csv")
     truths    = truths.loc[ truths["date"] > "2022-03-01"]
@@ -35,7 +36,7 @@ if __name__ == "__main__":
 
     for location_names in locations_pieces:
         locations = [ locname2loc[name] for name in location_names]
-        subset = forecasts.loc[forecasts.location.isin(locations)]
+        subset    = forecasts.loc[forecasts.location.isin(locations)]
 
         plt.style.use("fivethirtyeight")
         fig,axs = plt.subplots(3,3)
