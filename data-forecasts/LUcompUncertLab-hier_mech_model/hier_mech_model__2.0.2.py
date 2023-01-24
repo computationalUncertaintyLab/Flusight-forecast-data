@@ -306,7 +306,6 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     training_data__deaths__normalized = training_data__deaths / ttl
     training_data__cases__normalized  = training_data__cases  / ttl 
 
-    
     ttl_weeks = weekly_T+4
     
     days     = jnp.arange(0.,T+4*7).reshape(-1,1)
@@ -331,6 +330,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     log_kappa =  jnp.log(0.05)*jnp.ones((T,SEASONS))
     kappa     =  numpyro.deterministic("kappa", jnp.exp(log_kappa))
 
+    sigma_params = numpyro.sample( "sigma_params", dist.Beta( 1.*jnp.ones(SEASONS,),1.*jnp.ones(SEASONS,) )   )  
     log_sigma =  jnp.log(1./2)*jnp.ones((T,SEASONS))
     sigma     =  numpyro.deterministic("sigma", jnp.exp(log_sigma))
 
@@ -359,9 +359,6 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     S0 = (1.*percent_sus - I0)*jnp.ones(SEASONS,)
     R0 = 0.*jnp.ones(SEASONS,)
     D0   = training_data__deaths__normalized[0,:] 
-    
-    #weekly_times = np.array([weekly_T,weekly_C])
-    #case_indicators = training_data__cases_indicators[:weekly_times[s],s]
     
     initial_states = jnp.vstack( (S0,E0,I0,H0,R0,D0, I0,H0))
     
@@ -498,10 +495,6 @@ if __name__ == "__main__":
     RETROSPECTIVE = args.RETROSPECTIVE
     END_DATE      = args.END_DATE
 
-    # LOCATION = '19'
-    # RETROSPECTIVE=0
-    # END_DATE=0
-
     #--MODEL DATA
     model_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=4)
 
@@ -550,12 +543,11 @@ if __name__ == "__main__":
 
     score_crossval = lambda P,Q: score_over_params(P,Q,model_data) 
     
-    combos = [x for x in itertools.product(np.linspace(0.001,2.5,24*4),[100.], [100.])]
+    combos = [x for x in itertools.product(np.linspace(0.001,2.5,24*4),[1000.], [1000.])]
     results = Parallel(n_jobs=24)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
     results = sorted(results)
 
     best_beta_param, best_phis = results[0][-2:]
-#    best_beta_param, best_phis = 2.0,[1000,1000]
     
     print(results[:20])
     print(best_beta_param)
