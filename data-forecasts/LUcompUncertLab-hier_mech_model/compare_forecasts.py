@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     locations_pieces = np.array_split(sorted(locname2loc),6)
 
-    time = "2023-01-16"
+    time = "2023-01-23"
     models = ["../GT-FluFNP/", "../PSI-DICE/", "../UMass-gbq/","../CMU-TimeSeries/"]
     
     for location_names in locations_pieces:
