@@ -321,7 +321,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
     params = jnp.vstack([params1,params2])
     
-    log_beta = jnp.repeat(params,7,axis=0) + jnp.log(1.1)
+    log_beta = jnp.repeat(params,7,axis=0) #+ jnp.log(1.1)
     beta     = numpyro.deterministic("beta", jnp.exp(log_beta))
 
     log_rho =  jnp.log(1./7)*jnp.ones((T,SEASONS)) 
@@ -331,7 +331,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     kappa     =  numpyro.deterministic("kappa", jnp.exp(log_kappa))
 
     sigma_params = numpyro.sample( "sigma_params", dist.Beta( 1.*jnp.ones(SEASONS,),1.*jnp.ones(SEASONS,) )   )  
-    log_sigma =  jnp.log(1./2)*jnp.ones((T,SEASONS))
+    log_sigma =  jnp.log(sigma_params)*jnp.ones((T,SEASONS))
     sigma     =  numpyro.deterministic("sigma", jnp.exp(log_sigma))
 
     #--prior for percent of population that is susceptible
@@ -495,12 +495,16 @@ if __name__ == "__main__":
     RETROSPECTIVE = args.RETROSPECTIVE
     END_DATE      = args.END_DATE
 
+    # LOCATION      = '42'
+    # RETROSPECTIVE = 0
+    # END_DATE      = 0
+    
     #--MODEL DATA
     model_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=4)
 
     #--RUNNING THE MODEL
     nuts_kernel = NUTS(model)
-    mcmc        = MCMC( nuts_kernel , num_warmup=1250, num_samples=2000,progress_bar=True)
+    mcmc        = MCMC( nuts_kernel , num_warmup=2000, num_samples=2000,progress_bar=True)
     rng_key     = random.PRNGKey(0)
 
     def model_run(mcmc, prior_param, prior_phis, model_data):
@@ -620,3 +624,4 @@ if __name__ == "__main__":
     # #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
 
     # plt.show()
+
