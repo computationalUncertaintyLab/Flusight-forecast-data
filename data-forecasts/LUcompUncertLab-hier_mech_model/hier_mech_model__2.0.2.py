@@ -90,6 +90,9 @@ class comp_model_data(object):
         last_season        = self.flu.loc[ (self.flu.date >= "2022-01-30") & (self.flu.date <="2022-08-01")]
         current_season_flu = self.flu.loc[ (self.flu.date >= "2022-09-15") ]
 
+        print('here')
+        print(current_season_flu.iloc[-1])
+
         #--add abbreviation and loation name
         self.abb = last_season.iloc[0]["abbreviation"]
         self.location_name = last_season.iloc[0]["location_name"]
@@ -135,7 +138,6 @@ class comp_model_data(object):
                     days["location"].append(location)
                     days["population"].append(population)
 
-
                     try:
                         days["hosps"].append( float(data.loc[data.date==date,"hosps"].values) )
                         days["deaths"].append( float(data.loc[data.date==date,"deaths"].values) )
@@ -167,10 +169,22 @@ class comp_model_data(object):
 
                     day = day + timedelta(days=1)
                 week+=1
-            return pd.DataFrame(days)
+            df = pd.DataFrame(days)    
+            df["numili"] = df["numili"].replace(np.nan,0)
+            return df
         last_season    = enumerate_days(last_season.cdcformat.min(), last_season.cdcformat.max()   , self.S0, self.LOCATION, self.abb, self.location_name, last_season)
-        current_season_flu = enumerate_days(current_season_flu.cdcformat.min(), current_season_flu.cdcformat.max(), self.S0, self.LOCATION, self.abb, self.location_name, current_season_flu)
 
+        print("max")
+        print(current_season_flu.cdcformat.max())
+        
+        current_season_flu = enumerate_days(current_season_flu.cdcformat.min()
+                                            , current_season_flu.cdcformat.max()+2
+                                            , self.S0, self.LOCATION, self.abb, self.location_name, current_season_flu)
+
+        print('there')
+        print(last_season.iloc[-1])
+        print(current_season_flu.iloc[-1])
+        
         #--make sure that these are full weeks
         def week_check(x):
             if len(x)==7 or len(x) == 6:
@@ -300,6 +314,34 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
             states = jnp.vstack( (nS,nE,nI,nH,nR,nD, e2i,i2h) )
             return states, states
+
+    def one_step_SIR(carry, aray_element):
+            S,I,H,R,D, extra1, extra2 = carry
+            t,beta,rho,kappa,sigma, percent_hosp      = aray_element
+
+           #percent_hosp = 0.10
+            
+            I = I+ 1./ttl #--always infected ppl circulating in the system to allow for an outbreak
+            
+            s2i  = beta*I*S        # S->I
+            
+            i2r  = (rho*(1-percent_hosp))*I    # I->R 
+            i2h  = (rho*percent_hosp)*I        # I->H
+            
+            h2d  = (kappa*0.01)*H  # H->D
+            h2r  = (kappa*0.99)*H  # H->R
+
+            nI = I + s2i - (i2r + i2h)
+            nH = H + i2h - (h2d + h2r)
+            nD = D + h2d
+            nS = S - s2i
+
+            nR = R + (i2r + h2r)
+
+            states = jnp.vstack( (nS,nI,nH,nR,nD, s2i,i2h) )
+            return states, states
+ 
+        
     
     #--normalize the hosps, deaths, and cases so that they are proportions
     training_data__hosps__normalized  = training_data__hosps  / ttl
@@ -360,9 +402,10 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     R0 = 0.*jnp.ones(SEASONS,)
     D0   = training_data__deaths__normalized[0,:] 
     
-    initial_states = jnp.vstack( (S0,E0,I0,H0,R0,D0, I0,H0))
+    #initial_states = jnp.vstack( (S0,E0,I0,H0,R0,D0, I0,H0))
+    initial_states_SIR = jnp.vstack( (S0,I0,H0,R0,D0, I0,H0))
     
-    final, result = jax.lax.scan( one_step, initial_states, (ts,beta,rho,kappa,sigma,percent_hosp) ) #--T by STATES by SEASONS
+    final, result = jax.lax.scan( one_step_SIR, initial_states_SIR, (ts,beta,rho,kappa,sigma,percent_hosp) ) #--T by STATES by SEASONS
     states = numpyro.deterministic("states",result)
 
     modeled_hosps = numpyro.deterministic("hosps_at_day", result[:,-1,:]*ttl) #-T by SEASONS
@@ -454,7 +497,6 @@ def from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=0,HOLDOUTWEEKS=0):
     else:
         target_end_dates = [ (datetime.strptime(x,"%Y-%m-%d") - timedelta(weeks=HOLDOUTWEEKS)).strftime("%Y-%m-%d") for x in target_end_dates]
     
-    
     #--store all forecasts in a DataFrame
     forecast = {"target":[], "target_end_date":[], "quantile":[], "value":[]}
     for n,week_ahead_prediction in enumerate(quantiles.T):
@@ -495,7 +537,7 @@ if __name__ == "__main__":
     RETROSPECTIVE = args.RETROSPECTIVE
     END_DATE      = args.END_DATE
 
-    # LOCATION      = '42'
+    # LOCATION      = '08'
     # RETROSPECTIVE = 0
     # END_DATE      = 0
     
@@ -547,11 +589,12 @@ if __name__ == "__main__":
 
     score_crossval = lambda P,Q: score_over_params(P,Q,model_data) 
     
-    combos = [x for x in itertools.product(np.linspace(0.001,2.5,24*4),[1000.], [1000.])]
+    combos = [x for x in itertools.product(np.linspace(0.001,2.5,24*4),[1.], [1.])]
     results = Parallel(n_jobs=24)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
     results = sorted(results)
 
     best_beta_param, best_phis = results[0][-2:]
+    #best_beta_param, best_phis = 1., [1.,1.]
     
     print(results[:20])
     print(best_beta_param)
@@ -568,60 +611,77 @@ if __name__ == "__main__":
     else:
         forecast.to_csv("./forecasts/location__{:s}.csv".format(LOCATION),index=False)
 
+    import matplotlib.pyplot as plt
+    fig,axs = plt.subplots(2,3)
 
-    # import matplotlib.pyplot as plt
-    # fig,axs = plt.subplots(2,3)
-
-    # C = forecast_data.C
-    # S0 = forecast_data.S0
+    C = forecast_data.C
+    S0 = forecast_data.S0
     
-    # #--current seasons
-    # observed_hosps = forecast_data.training_data__hosps[:C,-1]
-    # infered_hosps  = np.median(samples["hosps_at_day"],0)[:C,-1]
+    #--current seasons
+    observed_hosps = forecast_data.training_data__hosps[:C,-1]
+    infered_hosps  = np.median(samples["hosps_at_day"],0)[:C,-1]
     
-    # domain = np.arange(0,C)
+    domain = np.arange(0,C)
 
-    # ax = axs[0,0]
+    ax = axs[0,0]
     
-    # ax.scatter(domain, observed_hosps,s=5, color = "k")
-    # ax.plot(   domain, infered_hosps    , color = "r" )
+    ax.scatter(domain, observed_hosps,s=5, color = "k")
+    ax.plot(   domain, infered_hosps    , color = "r" )
 
-    # forecast_horizon = np.arange(C,C+28)
-    # forecast = np.median(samples["forecast"],0)
+    forecast_horizon = np.arange(C,C+28)
+    forecast   = np.median(samples["forecast"],0)
+    forecast5  = np.percentile(samples["forecast"], [5],0)[0]
+    forecast95 = np.percentile(samples["forecast"],[95],0)[0]
     
-    # ax.plot(forecast_horizon, forecast, color = "blue", ls = "--")
+    ax.plot(forecast_horizon, forecast, color = "blue", ls = "--")
+    ax.fill_between(forecast_horizon, forecast5,forecast95, color = "blue", alpha = 0.5,  ls = "--")
+    
+    ax = axs[0,1]
+    beta_trajectory  = samples["beta"].mean(0)[:,-1]
+    ax.plot( beta_trajectory )
+    ax.axhline(0.25, color="black")
 
-    # ax = axs[0,1]
-    # beta_trajectory  = samples["beta"].mean(0)[:,-1]
-    # ax.plot( beta_trajectory )
-    # ax.axhline(0.25, color="black")
+    ax=axs[0,2]
 
-    # ax = axs[0,2]
+    L = len(observed_hosps)
+    observed_hosps_weekly = [sum(x) for x in np.split(observed_hosps,L/7 )]
+    infered_hosps_weekly  = [sum(x) for x in np.split(infered_hosps,L/7 )]
+
+    forecast   = [sum(x) for x in np.split(forecast,28/7)]
+    forecast5  = [sum(x) for x in np.split(forecast5,28/7)]
+    forecast95 = [sum(x) for x in np.split(forecast95,28/7)]
+
+    weekly_C = forecast_data.weekly_C
+    forecast_horizon = np.arange(weekly_C,weekly_C+4)
+
+    domain = np.arange(0,weekly_C)
+    ax.scatter(domain, observed_hosps_weekly,s=5, color = "k")
+    ax.plot(   domain, infered_hosps_weekly    , color = "r" )
+    
+    ax.plot(forecast_horizon, forecast, color = "blue", ls = "--")
+    ax.fill_between(forecast_horizon, forecast5,forecast95, color = "blue", alpha = 0.5,  ls = "--")
+    
+    #--last season
+    T = forecast_data.T
+    observed_hosps = forecast_data.training_data__hosps[:T,0]
+    infered_hosps  = samples["hosps_at_day"].mean(0)[:T,0]
+    
+    domain = np.arange(0,T)
+
+    ax = axs[1,0]
+    
+    ax.scatter(domain, observed_hosps,s=5, color = "k")
+    ax.plot(   domain, infered_hosps    , color = "r" )
+
+    ax = axs[1,1]
+    beta_trajectory  = samples["beta"].mean(0)[:,0]
+    ax.plot( beta_trajectory )
+    ax.axhline(0.25, color="black")
+
+    # ax = axs[1,2]
     # for sample in samples["states"]:
-    #     hosps = sample[:,3,-1]
+    #     hosps = sample[:,3,0]
     #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
 
-    # #--last season
-    # T = forecast_data.T
-    # observed_hosps = forecast_data.training_data__hosps[:T,0]
-    # infered_hosps  = samples["hosps_at_day"].mean(0)[:T,0]
-    
-    # domain = np.arange(0,T)
-
-    # ax = axs[1,0]
-    
-    # ax.scatter(domain, observed_hosps,s=5, color = "k")
-    # ax.plot(   domain, infered_hosps    , color = "r" )
-
-    # ax = axs[1,1]
-    # beta_trajectory  = samples["beta"].mean(0)[:,0]
-    # ax.plot( beta_trajectory )
-    # ax.axhline(0.25, color="black")
-
-    # # ax = axs[1,2]
-    # # for sample in samples["states"]:
-    # #     hosps = sample[:,3,0]
-    # #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
-
-    # plt.show()
+    plt.show()
 
