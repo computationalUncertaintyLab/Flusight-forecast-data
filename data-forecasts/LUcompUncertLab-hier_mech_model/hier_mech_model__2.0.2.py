@@ -488,19 +488,19 @@ if __name__ == "__main__":
     from jax.config import config
     config.update("jax_enable_x64", True)
 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--LOCATION'     ,type=str) 
-    # parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
-    # parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--LOCATION'     ,type=str) 
+    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
     
-    # args = parser.parse_args()
-    # LOCATION      = args.LOCATION
-    # RETROSPECTIVE = args.RETROSPECTIVE
-    # END_DATE      = args.END_DATE
+    args = parser.parse_args()
+    LOCATION      = args.LOCATION
+    RETROSPECTIVE = args.RETROSPECTIVE
+    END_DATE      = args.END_DATE
 
-    LOCATION = '19'
-    RETROSPECTIVE=0
-    END_DATE=0
+    # LOCATION = '19'
+    # RETROSPECTIVE=0
+    # END_DATE=0
 
     #--MODEL DATA
     model_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=4)
@@ -550,16 +550,16 @@ if __name__ == "__main__":
 
     score_crossval = lambda P,Q: score_over_params(P,Q,model_data) 
     
-    # combos = [x for x in itertools.product(np.linspace(0.001,2.5,100),[100.], [100.])]
-    # results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
-    # results = sorted(results)
+    combos = [x for x in itertools.product(np.linspace(0.001,2.5,100),[100.], [100.])]
+    results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
+    results = sorted(results)
 
     #best_beta_param, best_phis = results[0][-2:]
-    best_beta_param, best_phis = 2.0,[1000,1000]
+#    best_beta_param, best_phis = 2.0,[1000,1000]
     
-    #print(results[:20])
-    #print(best_beta_param)
-    #print(best_phis)
+    print(results[:20])
+    print(best_beta_param)
+    print(best_phis)
 
     #--traiing complete now finish
     forecast_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=0)
@@ -573,58 +573,58 @@ if __name__ == "__main__":
         forecast.to_csv("./forecasts/location__{:s}.csv".format(LOCATION),index=False)
 
 
-    import matplotlib.pyplot as plt
-    fig,axs = plt.subplots(2,3)
+    # import matplotlib.pyplot as plt
+    # fig,axs = plt.subplots(2,3)
 
-    C = forecast_data.C
-    S0 = forecast_data.S0
+    # C = forecast_data.C
+    # S0 = forecast_data.S0
     
-    #--current seasons
-    observed_hosps = forecast_data.training_data__hosps[:C,-1]
-    infered_hosps  = np.median(samples["hosps_at_day"],0)[:C,-1]
+    # #--current seasons
+    # observed_hosps = forecast_data.training_data__hosps[:C,-1]
+    # infered_hosps  = np.median(samples["hosps_at_day"],0)[:C,-1]
     
-    domain = np.arange(0,C)
+    # domain = np.arange(0,C)
 
-    ax = axs[0,0]
+    # ax = axs[0,0]
     
-    ax.scatter(domain, observed_hosps,s=5, color = "k")
-    ax.plot(   domain, infered_hosps    , color = "r" )
+    # ax.scatter(domain, observed_hosps,s=5, color = "k")
+    # ax.plot(   domain, infered_hosps    , color = "r" )
 
-    forecast_horizon = np.arange(C,C+28)
-    forecast = np.median(samples["forecast"],0)
+    # forecast_horizon = np.arange(C,C+28)
+    # forecast = np.median(samples["forecast"],0)
     
-    ax.plot(forecast_horizon, forecast, color = "blue", ls = "--")
+    # ax.plot(forecast_horizon, forecast, color = "blue", ls = "--")
 
-    ax = axs[0,1]
-    beta_trajectory  = samples["beta"].mean(0)[:,-1]
-    ax.plot( beta_trajectory )
-    ax.axhline(0.25, color="black")
+    # ax = axs[0,1]
+    # beta_trajectory  = samples["beta"].mean(0)[:,-1]
+    # ax.plot( beta_trajectory )
+    # ax.axhline(0.25, color="black")
 
-    ax = axs[0,2]
-    for sample in samples["states"]:
-        hosps = sample[:,3,-1]
-        ax.plot(hosps, alpha=0.1, color="black",lw=1)
-
-    #--last season
-    T = forecast_data.T
-    observed_hosps = forecast_data.training_data__hosps[:T,0]
-    infered_hosps  = samples["hosps_at_day"].mean(0)[:T,0]
-    
-    domain = np.arange(0,T)
-
-    ax = axs[1,0]
-    
-    ax.scatter(domain, observed_hosps,s=5, color = "k")
-    ax.plot(   domain, infered_hosps    , color = "r" )
-
-    ax = axs[1,1]
-    beta_trajectory  = samples["beta"].mean(0)[:,0]
-    ax.plot( beta_trajectory )
-    ax.axhline(0.25, color="black")
-
-    # ax = axs[1,2]
+    # ax = axs[0,2]
     # for sample in samples["states"]:
-    #     hosps = sample[:,3,0]
+    #     hosps = sample[:,3,-1]
     #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
 
-    plt.show()
+    # #--last season
+    # T = forecast_data.T
+    # observed_hosps = forecast_data.training_data__hosps[:T,0]
+    # infered_hosps  = samples["hosps_at_day"].mean(0)[:T,0]
+    
+    # domain = np.arange(0,T)
+
+    # ax = axs[1,0]
+    
+    # ax.scatter(domain, observed_hosps,s=5, color = "k")
+    # ax.plot(   domain, infered_hosps    , color = "r" )
+
+    # ax = axs[1,1]
+    # beta_trajectory  = samples["beta"].mean(0)[:,0]
+    # ax.plot( beta_trajectory )
+    # ax.axhline(0.25, color="black")
+
+    # # ax = axs[1,2]
+    # # for sample in samples["states"]:
+    # #     hosps = sample[:,3,0]
+    # #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
+
+    # plt.show()
