@@ -550,11 +550,11 @@ if __name__ == "__main__":
 
     score_crossval = lambda P,Q: score_over_params(P,Q,model_data) 
     
-    combos = [x for x in itertools.product(np.linspace(0.001,2.5,100),[100.], [100.])]
+    combos = [x for x in itertools.product(np.linspace(0.001,2.0,24),[100.], [100.])]
     results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
     results = sorted(results)
 
-    #best_beta_param, best_phis = results[0][-2:]
+    best_beta_param, best_phis = results[0][-2:]
 #    best_beta_param, best_phis = 2.0,[1000,1000]
     
     print(results[:20])
