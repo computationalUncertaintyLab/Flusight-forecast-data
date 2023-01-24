@@ -611,77 +611,77 @@ if __name__ == "__main__":
     else:
         forecast.to_csv("./forecasts/location__{:s}.csv".format(LOCATION),index=False)
 
-    import matplotlib.pyplot as plt
-    fig,axs = plt.subplots(2,3)
+    # import matplotlib.pyplot as plt
+    # fig,axs = plt.subplots(2,3)
 
-    C = forecast_data.C
-    S0 = forecast_data.S0
+    # C = forecast_data.C
+    # S0 = forecast_data.S0
     
-    #--current seasons
-    observed_hosps = forecast_data.training_data__hosps[:C,-1]
-    infered_hosps  = np.median(samples["hosps_at_day"],0)[:C,-1]
+    # #--current seasons
+    # observed_hosps = forecast_data.training_data__hosps[:C,-1]
+    # infered_hosps  = np.median(samples["hosps_at_day"],0)[:C,-1]
     
-    domain = np.arange(0,C)
+    # domain = np.arange(0,C)
 
-    ax = axs[0,0]
+    # ax = axs[0,0]
     
-    ax.scatter(domain, observed_hosps,s=5, color = "k")
-    ax.plot(   domain, infered_hosps    , color = "r" )
+    # ax.scatter(domain, observed_hosps,s=5, color = "k")
+    # ax.plot(   domain, infered_hosps    , color = "r" )
 
-    forecast_horizon = np.arange(C,C+28)
-    forecast   = np.median(samples["forecast"],0)
-    forecast5  = np.percentile(samples["forecast"], [5],0)[0]
-    forecast95 = np.percentile(samples["forecast"],[95],0)[0]
+    # forecast_horizon = np.arange(C,C+28)
+    # forecast   = np.median(samples["forecast"],0)
+    # forecast5  = np.percentile(samples["forecast"], [5],0)[0]
+    # forecast95 = np.percentile(samples["forecast"],[95],0)[0]
     
-    ax.plot(forecast_horizon, forecast, color = "blue", ls = "--")
-    ax.fill_between(forecast_horizon, forecast5,forecast95, color = "blue", alpha = 0.5,  ls = "--")
+    # ax.plot(forecast_horizon, forecast, color = "blue", ls = "--")
+    # ax.fill_between(forecast_horizon, forecast5,forecast95, color = "blue", alpha = 0.5,  ls = "--")
     
-    ax = axs[0,1]
-    beta_trajectory  = samples["beta"].mean(0)[:,-1]
-    ax.plot( beta_trajectory )
-    ax.axhline(0.25, color="black")
+    # ax = axs[0,1]
+    # beta_trajectory  = samples["beta"].mean(0)[:,-1]
+    # ax.plot( beta_trajectory )
+    # ax.axhline(0.25, color="black")
 
-    ax=axs[0,2]
+    # ax=axs[0,2]
 
-    L = len(observed_hosps)
-    observed_hosps_weekly = [sum(x) for x in np.split(observed_hosps,L/7 )]
-    infered_hosps_weekly  = [sum(x) for x in np.split(infered_hosps,L/7 )]
+    # L = len(observed_hosps)
+    # observed_hosps_weekly = [sum(x) for x in np.split(observed_hosps,L/7 )]
+    # infered_hosps_weekly  = [sum(x) for x in np.split(infered_hosps,L/7 )]
 
-    forecast   = [sum(x) for x in np.split(forecast,28/7)]
-    forecast5  = [sum(x) for x in np.split(forecast5,28/7)]
-    forecast95 = [sum(x) for x in np.split(forecast95,28/7)]
+    # forecast   = [sum(x) for x in np.split(forecast,28/7)]
+    # forecast5  = [sum(x) for x in np.split(forecast5,28/7)]
+    # forecast95 = [sum(x) for x in np.split(forecast95,28/7)]
 
-    weekly_C = forecast_data.weekly_C
-    forecast_horizon = np.arange(weekly_C,weekly_C+4)
+    # weekly_C = forecast_data.weekly_C
+    # forecast_horizon = np.arange(weekly_C,weekly_C+4)
 
-    domain = np.arange(0,weekly_C)
-    ax.scatter(domain, observed_hosps_weekly,s=5, color = "k")
-    ax.plot(   domain, infered_hosps_weekly    , color = "r" )
+    # domain = np.arange(0,weekly_C)
+    # ax.scatter(domain, observed_hosps_weekly,s=5, color = "k")
+    # ax.plot(   domain, infered_hosps_weekly    , color = "r" )
     
-    ax.plot(forecast_horizon, forecast, color = "blue", ls = "--")
-    ax.fill_between(forecast_horizon, forecast5,forecast95, color = "blue", alpha = 0.5,  ls = "--")
+    # ax.plot(forecast_horizon, forecast, color = "blue", ls = "--")
+    # ax.fill_between(forecast_horizon, forecast5,forecast95, color = "blue", alpha = 0.5,  ls = "--")
     
-    #--last season
-    T = forecast_data.T
-    observed_hosps = forecast_data.training_data__hosps[:T,0]
-    infered_hosps  = samples["hosps_at_day"].mean(0)[:T,0]
+    # #--last season
+    # T = forecast_data.T
+    # observed_hosps = forecast_data.training_data__hosps[:T,0]
+    # infered_hosps  = samples["hosps_at_day"].mean(0)[:T,0]
     
-    domain = np.arange(0,T)
+    # domain = np.arange(0,T)
 
-    ax = axs[1,0]
+    # ax = axs[1,0]
     
-    ax.scatter(domain, observed_hosps,s=5, color = "k")
-    ax.plot(   domain, infered_hosps    , color = "r" )
+    # ax.scatter(domain, observed_hosps,s=5, color = "k")
+    # ax.plot(   domain, infered_hosps    , color = "r" )
 
-    ax = axs[1,1]
-    beta_trajectory  = samples["beta"].mean(0)[:,0]
-    ax.plot( beta_trajectory )
-    ax.axhline(0.25, color="black")
+    # ax = axs[1,1]
+    # beta_trajectory  = samples["beta"].mean(0)[:,0]
+    # ax.plot( beta_trajectory )
+    # ax.axhline(0.25, color="black")
 
-    # ax = axs[1,2]
-    # for sample in samples["states"]:
-    #     hosps = sample[:,3,0]
-    #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
+    # # ax = axs[1,2]
+    # # for sample in samples["states"]:
+    # #     hosps = sample[:,3,0]
+    # #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
 
-    plt.show()
+    # plt.show()
 
