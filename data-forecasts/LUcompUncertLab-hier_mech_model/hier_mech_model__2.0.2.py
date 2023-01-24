@@ -322,7 +322,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
     params = jnp.vstack([params1,params2])
     
-    log_beta = jnp.repeat(params,7,axis=0) + jnp.log( 1./( (1./7) + (1./5) ) ) 
+    log_beta = jnp.repeat(params,7,axis=0) + jnp.log(1.)
     beta     = numpyro.deterministic("beta", jnp.exp(log_beta))
 
     log_rho =  jnp.log(1./7)*jnp.ones((T,SEASONS)) 
@@ -331,7 +331,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     log_kappa =  jnp.log(0.05)*jnp.ones((T,SEASONS))
     kappa     =  numpyro.deterministic("kappa", jnp.exp(log_kappa))
 
-    log_sigma =  jnp.log(1./5)*jnp.ones((T,SEASONS))
+    log_sigma =  jnp.log(1./2)*jnp.ones((T,SEASONS))
     sigma     =  numpyro.deterministic("sigma", jnp.exp(log_sigma))
 
     #--prior for percent of population that is susceptible
@@ -375,7 +375,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     ts_vec = np.repeat(ts[:,np.newaxis],2,axis=1)
     
     data_indices  = ts_vec < times
-    
+
     ll_hosps  = numpyro.sample("LL_H", dist.NegativeBinomial2(modeled_hosps*data_indices + 10**-10, phi_hosps), obs = training_data__hosps*data_indices )
 
     #--likelihood for cases
@@ -495,7 +495,7 @@ if __name__ == "__main__":
     RETROSPECTIVE = args.RETROSPECTIVE
     END_DATE      = args.END_DATE
 
-    # LOCATION = '42'
+    # LOCATION = '05'
     # RETROSPECTIVE=0
     # END_DATE=0
 
@@ -547,7 +547,7 @@ if __name__ == "__main__":
 
     score_crossval = lambda P,Q: score_over_params(P,Q,model_data) 
     
-    combos = [x for x in itertools.product(np.linspace(0.001,2.5,100),[2.], [2.])]
+    combos = [x for x in itertools.product(np.linspace(0.001,2.5,100),[10.], [10.])]
     results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
     results = sorted(results)
 
@@ -596,9 +596,6 @@ if __name__ == "__main__":
     # ax.plot( beta_trajectory )
     # ax.axhline(0.25, color="black")
 
-    # plt.show()
-    
-    
     # ax = axs[0,2]
     # for sample in samples["states"]:
     #     hosps = sample[:,3,-1]
@@ -621,9 +618,9 @@ if __name__ == "__main__":
     # ax.plot( beta_trajectory )
     # ax.axhline(0.25, color="black")
 
-    # ax = axs[1,2]
-    # for sample in samples["states"]:
-    #     hosps = sample[:,3,0]
-    #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
+    # # ax = axs[1,2]
+    # # for sample in samples["states"]:
+    # #     hosps = sample[:,3,0]
+    # #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
 
     # plt.show()
