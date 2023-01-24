@@ -322,7 +322,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
     params = jnp.vstack([params1,params2])
     
-    log_beta = jnp.repeat(params,7,axis=0) + jnp.log(1.)
+    log_beta = jnp.repeat(params,7,axis=0) + jnp.log(1.1)
     beta     = numpyro.deterministic("beta", jnp.exp(log_beta))
 
     log_rho =  jnp.log(1./7)*jnp.ones((T,SEASONS)) 
@@ -395,7 +395,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
     #--prediction
     if future>0:
-        numpyro.deterministic("forecast", modeled_hosps[C-1:C+28-1,-1])
+        numpyro.deterministic("forecast", modeled_hosps[C:C+28,-1])
         
 def from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=0,HOLDOUTWEEKS=0):
     from datetime import datetime, timedelta
@@ -547,7 +547,7 @@ if __name__ == "__main__":
 
     score_crossval = lambda P,Q: score_over_params(P,Q,model_data) 
     
-    combos = [x for x in itertools.product(np.linspace(0.001,2.5,100),[10.], [10.])]
+    combos = [x for x in itertools.product(np.linspace(0.001,2.5,100),[100.], [100.])]
     results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
     results = sorted(results)
 
