@@ -274,9 +274,9 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
     def one_step(carry, aray_element):
             S,E,I,H,R,D, extra1, extra2 = carry
-            t,beta,rho,kappa,sigma      = aray_element
+            t,beta,rho,kappa,sigma, percent_hosp      = aray_element
 
-            percent_hosp = 0.02
+           #percent_hosp = 0.10
             
             I = I+ 1./ttl #--always infected ppl circulating in the system to allow for an outbreak
             E = E+ 1./ttl
@@ -284,7 +284,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
             s2e  = beta*I*S        # S->I
             e2i  = sigma*E         # S->E
             
-            i2r  = (rho*(1-percent_hosp))*I    # I->R (lambda = 0.25)
+            i2r  = (rho*(1-percent_hosp))*I    # I->R 
             i2h  = (rho*percent_hosp)*I        # I->H
             
             h2d  = (kappa*0.01)*H  # H->D
@@ -339,10 +339,11 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     #percent_sus = numpyro.sample("percent_sus", dist.Beta(0.5*20*seasons ,0.5*20*seasons) )
 
     #nu = numpyro.sample( "nu", dist.Gamma(1.,1.) )
-    percent_sus = numpyro.sample("percent_sus", dist.Beta(1.0*jnp.ones(SEASONS,),0.75*20*jnp.ones(SEASONS,) ))
+    percent_sus = numpyro.sample("percent_sus", dist.Beta(0.05*20*jnp.ones(SEASONS,),(1-0.05)*20*jnp.ones(SEASONS,) ))
 
-    #percent_hosp = numpyro.sample("percent_hosp", dist.Beta(omega*100*jnp.ones(SEASONS,), 1.*100*jnp.ones(SEASONS,) )) 
-    #percent_hosp = jnp.repeat(percent_hosp[jnp.newaxis],T,0)
+    omega=0.1
+    percent_hosp = numpyro.sample("percent_hosp", dist.Beta(omega*10*jnp.ones(SEASONS,), 1.*10*jnp.ones(SEASONS,) )) 
+    percent_hosp = jnp.repeat(percent_hosp[jnp.newaxis],T,0)
  
     phi_hosps = numpyro.sample("phi_hosps", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=prior_phis[0]*jnp.ones(2,)) )
     phi_cases = numpyro.sample("phi_cases", dist.TruncatedNormal(low= 0.*jnp.ones(2,) ,loc=0*jnp.ones(2,) ,scale=prior_phis[1]*jnp.ones(2,)) )
@@ -364,7 +365,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     
     initial_states = jnp.vstack( (S0,E0,I0,H0,R0,D0, I0,H0))
     
-    final, result = jax.lax.scan( one_step, initial_states, (ts,beta,rho,kappa,sigma) ) #--T by STATES by SEASONS
+    final, result = jax.lax.scan( one_step, initial_states, (ts,beta,rho,kappa,sigma,percent_hosp) ) #--T by STATES by SEASONS
     states = numpyro.deterministic("states",result)
 
     modeled_hosps = numpyro.deterministic("hosps_at_day", result[:,-1,:]*ttl) #-T by SEASONS
@@ -376,6 +377,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     
     data_indices  = ts_vec < times
 
+    #ll_hosps  = numpyro.sample("LL_H", dist.Poisson(modeled_hosps*data_indices + 10**-10), obs = training_data__hosps*data_indices )
     ll_hosps  = numpyro.sample("LL_H", dist.NegativeBinomial2(modeled_hosps*data_indices + 10**-10, phi_hosps), obs = training_data__hosps*data_indices )
 
     #--likelihood for cases
@@ -391,6 +393,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     
     week_indices  = weekly_vec < weekly_times
 
+    #ll_cases  = numpyro.sample("LL_C", dist.Poisson(modeled_weekly_cases*week_indices+ 10**-10) ,obs = training_data__cases*week_indices )
     ll_cases  = numpyro.sample("LL_C", dist.NegativeBinomial2(modeled_weekly_cases*week_indices+ 10**-10, phi_cases) ,obs = training_data__cases*week_indices )
 
     #--prediction
@@ -485,19 +488,19 @@ if __name__ == "__main__":
     from jax.config import config
     config.update("jax_enable_x64", True)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--LOCATION'     ,type=str) 
-    parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
-    parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--LOCATION'     ,type=str) 
+    # parser.add_argument('--RETROSPECTIVE',type=int, nargs = "?", const=0)
+    # parser.add_argument('--END_DATE'     ,type=str, nargs = "?", const=0)
     
-    args = parser.parse_args()
-    LOCATION      = args.LOCATION
-    RETROSPECTIVE = args.RETROSPECTIVE
-    END_DATE      = args.END_DATE
+    # args = parser.parse_args()
+    # LOCATION      = args.LOCATION
+    # RETROSPECTIVE = args.RETROSPECTIVE
+    # END_DATE      = args.END_DATE
 
-    # LOCATION = '05'
-    # RETROSPECTIVE=0
-    # END_DATE=0
+    LOCATION = '19'
+    RETROSPECTIVE=0
+    END_DATE=0
 
     #--MODEL DATA
     model_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=4)
@@ -547,15 +550,16 @@ if __name__ == "__main__":
 
     score_crossval = lambda P,Q: score_over_params(P,Q,model_data) 
     
-    combos = [x for x in itertools.product(np.linspace(0.001,2.5,100),[100.], [100.])]
-    results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
-    results = sorted(results)
+    # combos = [x for x in itertools.product(np.linspace(0.001,2.5,100),[100.], [100.])]
+    # results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
+    # results = sorted(results)
 
-    best_beta_param, best_phis = results[0][-2:]
+    #best_beta_param, best_phis = results[0][-2:]
+    best_beta_param, best_phis = 2.0,[1000,1000]
     
-    print(results[:20])
-    print(best_beta_param)
-    print(best_phis)
+    #print(results[:20])
+    #print(best_beta_param)
+    #print(best_phis)
 
     #--traiing complete now finish
     forecast_data = comp_model_data(LOCATION=LOCATION,HOLDOUTWEEKS=0)
@@ -569,58 +573,58 @@ if __name__ == "__main__":
         forecast.to_csv("./forecasts/location__{:s}.csv".format(LOCATION),index=False)
 
 
-    # import matplotlib.pyplot as plt
-    # fig,axs = plt.subplots(2,3)
+    import matplotlib.pyplot as plt
+    fig,axs = plt.subplots(2,3)
 
-    # C = forecast_data.C
-    # S0 = forecast_data.S0
+    C = forecast_data.C
+    S0 = forecast_data.S0
     
-    # #--current seasons
-    # observed_hosps = forecast_data.training_data__hosps[:C,-1]
-    # infered_hosps  = np.median(samples["hosps_at_day"],0)[:C,-1]
+    #--current seasons
+    observed_hosps = forecast_data.training_data__hosps[:C,-1]
+    infered_hosps  = np.median(samples["hosps_at_day"],0)[:C,-1]
     
-    # domain = np.arange(0,C)
+    domain = np.arange(0,C)
 
-    # ax = axs[0,0]
+    ax = axs[0,0]
     
-    # ax.scatter(domain, observed_hosps,s=5, color = "k")
-    # ax.plot(   domain, infered_hosps    , color = "r" )
+    ax.scatter(domain, observed_hosps,s=5, color = "k")
+    ax.plot(   domain, infered_hosps    , color = "r" )
 
-    # forecast_horizon = np.arange(C,C+28)
-    # forecast = np.median(samples["forecast"],0)
+    forecast_horizon = np.arange(C,C+28)
+    forecast = np.median(samples["forecast"],0)
     
-    # ax.plot(forecast_horizon, forecast, color = "blue", ls = "--")
+    ax.plot(forecast_horizon, forecast, color = "blue", ls = "--")
 
-    # ax = axs[0,1]
-    # beta_trajectory  = samples["beta"].mean(0)[:,-1]
-    # ax.plot( beta_trajectory )
-    # ax.axhline(0.25, color="black")
+    ax = axs[0,1]
+    beta_trajectory  = samples["beta"].mean(0)[:,-1]
+    ax.plot( beta_trajectory )
+    ax.axhline(0.25, color="black")
 
-    # ax = axs[0,2]
+    ax = axs[0,2]
+    for sample in samples["states"]:
+        hosps = sample[:,3,-1]
+        ax.plot(hosps, alpha=0.1, color="black",lw=1)
+
+    #--last season
+    T = forecast_data.T
+    observed_hosps = forecast_data.training_data__hosps[:T,0]
+    infered_hosps  = samples["hosps_at_day"].mean(0)[:T,0]
+    
+    domain = np.arange(0,T)
+
+    ax = axs[1,0]
+    
+    ax.scatter(domain, observed_hosps,s=5, color = "k")
+    ax.plot(   domain, infered_hosps    , color = "r" )
+
+    ax = axs[1,1]
+    beta_trajectory  = samples["beta"].mean(0)[:,0]
+    ax.plot( beta_trajectory )
+    ax.axhline(0.25, color="black")
+
+    # ax = axs[1,2]
     # for sample in samples["states"]:
-    #     hosps = sample[:,3,-1]
+    #     hosps = sample[:,3,0]
     #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
 
-    # #--last season
-    # T = forecast_data.T
-    # observed_hosps = forecast_data.training_data__hosps[:T,0]
-    # infered_hosps  = samples["hosps_at_day"].mean(0)[:T,0]
-    
-    # domain = np.arange(0,T)
-
-    # ax = axs[1,0]
-    
-    # ax.scatter(domain, observed_hosps,s=5, color = "k")
-    # ax.plot(   domain, infered_hosps    , color = "r" )
-
-    # ax = axs[1,1]
-    # beta_trajectory  = samples["beta"].mean(0)[:,0]
-    # ax.plot( beta_trajectory )
-    # ax.axhline(0.25, color="black")
-
-    # # ax = axs[1,2]
-    # # for sample in samples["states"]:
-    # #     hosps = sample[:,3,0]
-    # #     ax.plot(hosps, alpha=0.1, color="black",lw=1)
-
-    # plt.show()
+    plt.show()
