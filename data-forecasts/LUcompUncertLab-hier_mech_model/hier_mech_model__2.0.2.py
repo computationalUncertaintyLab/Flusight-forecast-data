@@ -282,10 +282,11 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
             E = E+ 1./ttl
             
             s2e  = beta*I*S        # S->I
-            e2i  = sigma*E
+            e2i  = sigma*E         # S->E
             
             i2r  = (rho*(1-percent_hosp))*I    # I->R (lambda = 0.25)
-            i2h  = (rho*percent_hosp)*I    # I->H 
+            i2h  = (rho*percent_hosp)*I        # I->H
+            
             h2d  = (kappa*0.01)*H  # H->D
             h2r  = (kappa*0.99)*H  # H->R
 
@@ -305,7 +306,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     training_data__deaths__normalized = training_data__deaths / ttl
     training_data__cases__normalized  = training_data__cases  / ttl 
 
-    weeks = jnp.arange(0,weekly_T+4).reshape(-1,1)
+    
     ttl_weeks = weekly_T+4
     
     days     = jnp.arange(0.,T+4*7).reshape(-1,1)
@@ -321,7 +322,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
 
     params = jnp.vstack([params1,params2])
     
-    log_beta = jnp.repeat(params,7,axis=0) + jnp.log(1./7)
+    log_beta = jnp.repeat(params,7,axis=0) + jnp.log( 1./( (1./7) + (1./5) ) ) 
     beta     = numpyro.deterministic("beta", jnp.exp(log_beta))
 
     log_rho =  jnp.log(1./7)*jnp.ones((T,SEASONS)) 
@@ -330,7 +331,7 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     log_kappa =  jnp.log(0.05)*jnp.ones((T,SEASONS))
     kappa     =  numpyro.deterministic("kappa", jnp.exp(log_kappa))
 
-    log_sigma =  jnp.log(0.05)*jnp.ones((T,SEASONS))
+    log_sigma =  jnp.log(1./5)*jnp.ones((T,SEASONS))
     sigma     =  numpyro.deterministic("sigma", jnp.exp(log_sigma))
 
     #--prior for percent of population that is susceptible
@@ -351,8 +352,8 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     ts = jnp.arange(0,T)
 
     H0   = training_data__hosps__normalized[0,:] 
-    E0 = training_data__cases__normalized[0,:]*(1/7)
-    I0 = training_data__cases__normalized[0,:]*(1/7)
+    E0 =  numpyro.sample( "E0", dist.Uniform(0*jnp.ones(SEASONS,), (20./ttl)*jnp.ones(SEASONS,))  ) #training_data__cases__normalized[0,:]*(1/7)
+    I0 =  numpyro.sample( "I0", dist.Uniform(0*jnp.ones(SEASONS,), (20./ttl)*jnp.ones(SEASONS,))  ) #training_data__cases__normalized[0,:]*(1/7)
 
     S0 = (1.*percent_sus - I0)*jnp.ones(SEASONS,)
     R0 = 0.*jnp.ones(SEASONS,)
@@ -380,16 +381,17 @@ def model( T, C, weekly_T,weekly_C, SEASONS, ttl
     #--likelihood for cases
 
     #--compute weekly sums
-    # modeled_weekly_splits     = jnp.split(modeled_cases, T/7 )
-    # modeled_weekly_cases      = jnp.array([sum(x) for x in modeled_weekly_splits])
-    # modeled_cases_at_week = numpyro.deterministic("cases_at_week", modeled_weekly_cases)
+    modeled_weekly_splits     = jnp.split(modeled_cases, T/7 )
+    modeled_weekly_cases      = jnp.array([sum(x) for x in modeled_weekly_splits])
+    modeled_cases_at_week = numpyro.deterministic("cases_at_week", modeled_weekly_cases)
 
-    # weekly_times = jnp.array([weekly_T,weekly_C])
-    # weekly_vec = np.repeat(weeks[:,np.newaxis],2,axis=1)
+    weeks = jnp.arange(0,weekly_T)
+    weekly_times = jnp.array([weekly_T,weekly_C])
+    weekly_vec = np.repeat(weeks[:,np.newaxis],2,axis=1)
     
-    # week_indices  = weekly_vec < weekly_times
- 
-    # ll_cases  = numpyro.sample("LL_C", dist.NegativeBinomial2(modeled_weekly_cases*week_indices+ 10**-10, phi_cases) ,obs = training_data__cases*week_indices )
+    week_indices  = weekly_vec < weekly_times
+
+    ll_cases  = numpyro.sample("LL_C", dist.NegativeBinomial2(modeled_weekly_cases*week_indices+ 10**-10, phi_cases) ,obs = training_data__cases*week_indices )
 
     #--prediction
     if future>0:
@@ -446,8 +448,6 @@ def from_samples_to_forecast(samples,RETROSPECTIVE=0,S0=0,HOLDOUTWEEKS=0):
         next_sat = next_saturday_after_monday_submission( number_of_days_until_monday)    
     target_end_dates = collect_target_end_dates(next_sat)
 
-    print(target_end_dates)
-    
     #--HOLDOUT adjustment
     if HOLDOUTWEEKS==0:
         pass
@@ -547,7 +547,7 @@ if __name__ == "__main__":
 
     score_crossval = lambda P,Q: score_over_params(P,Q,model_data) 
     
-    combos = [x for x in itertools.product(np.linspace(0.001,1.0,100),[1./100], [1./100])]
+    combos = [x for x in itertools.product(np.linspace(0.001,2.5,100),[2.], [2.])]
     results = Parallel(n_jobs=30)(delayed(score_crossval)(p,[q,r]) for (p,q,r) in combos)
     results = sorted(results)
 
