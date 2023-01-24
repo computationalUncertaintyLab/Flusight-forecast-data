@@ -84,6 +84,8 @@ class comp_model_data(object):
         self.S0 = S0
 
     def split_into_seasons(self):
+        from epiweeks import Week
+        
         #--subset to october to august
         last_season        = self.flu.loc[ (self.flu.date >= "2022-01-30") & (self.flu.date <="2022-08-01")]
         current_season_flu = self.flu.loc[ (self.flu.date >= "2022-09-15") ]
@@ -175,6 +177,8 @@ class comp_model_data(object):
         print("max")
         maxweek =  Week.fromstring("{:d}".format(int(current_season_flu.cdcformat.max())))
         maxweek+=2
+
+        print(maxweek)
 
         current_season_flu = enumerate_days(current_season_flu.cdcformat.min()
                                             , maxweek.cdcformat()
