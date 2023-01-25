@@ -33,8 +33,8 @@ if __name__ == "__main__":
 
     locations_pieces = np.array_split(sorted(locname2loc),6)
 
-    time = "2023-01-23"
-    models = ["../GT-FluFNP/", "../PSI-DICE/", "../UMass-gbq/","../CMU-TimeSeries/"]
+    time = "2023-01-30"
+    models = ["./new_forecasts/"]#  "../GT-FluFNP/", "../PSI-DICE/", "../UMass-gbq/","../CMU-TimeSeries/","./new_forecasts/"]
     
     for location_names in locations_pieces:
         locations = [ locname2loc[name] for name in location_names]
@@ -58,9 +58,10 @@ if __name__ == "__main__":
             ax.plot( dates, truth["value"], color="black", lw=1 )
 
             all_forecasts = [forecast]
-            
+
             #--load other models
             for model in models:
+                print(model+"{:s}*.csv".format(time))
                 f = glob(model+"{:s}*.csv".format(time))
         
                 if len(f)==0:
@@ -70,10 +71,9 @@ if __name__ == "__main__":
                 state = d.loc[d.location==location]
 
                 all_forecasts.append(state)
-                
+
             colors = ['blue','red','purple',"green","orange"]
             for n,fcast in enumerate(all_forecasts):
-
                 if len(fcast)==0:
                     continue
                 
@@ -82,7 +82,10 @@ if __name__ == "__main__":
 
                 dates = pd.to_datetime(forecast__wide.index)
 
-                ax.plot(dates, forecast__wide[0.500], lw=1 ,color=colors[n], label = "{:s}".format(models[n]))
+                forecast__wide.columns = np.round(forecast__wide.columns,3)
+                print(forecast__wide.columns)
+                
+                ax.plot(dates, forecast__wide[0.500], lw=1 ,color=colors[n], label = "{:s}".format(models[n-1]))
                 ax.scatter(dates, forecast__wide[0.500],s=4,color=colors[n])
 
                 ax.fill_between(dates, forecast__wide[0.250],forecast__wide[0.750], alpha=0.10, color=colors[n])
