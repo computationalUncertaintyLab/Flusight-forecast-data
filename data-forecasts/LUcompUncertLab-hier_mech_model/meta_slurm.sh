@@ -3,7 +3,7 @@
 #SBATCH --partition=health,lts,hawkcpu,infolab,engi,eng
  
 #--Request 1 hour of computing time
-#SBATCH --time=10:00:00
+#SBATCH --time=1:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
  
