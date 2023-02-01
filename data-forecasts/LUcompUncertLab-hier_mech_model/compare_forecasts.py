@@ -35,6 +35,7 @@ if __name__ == "__main__":
 
     time = "2023-01-30"
     models = ["./new_forecasts/"]#  "../GT-FluFNP/", "../PSI-DICE/", "../UMass-gbq/","../CMU-TimeSeries/","./new_forecasts/"]
+    model_names = ["SIR only", "SIR/SEIR"]
     
     for location_names in locations_pieces:
         locations = [ locname2loc[name] for name in location_names]
@@ -85,7 +86,7 @@ if __name__ == "__main__":
                 forecast__wide.columns = np.round(forecast__wide.columns,3)
                 print(forecast__wide.columns)
                 
-                ax.plot(dates, forecast__wide[0.500], lw=1 ,color=colors[n], label = "{:s}".format(models[n-1]))
+                ax.plot(dates, forecast__wide[0.500], lw=1 ,color=colors[n], label = "{:s}".format(model_names[n]))
                 ax.scatter(dates, forecast__wide[0.500],s=4,color=colors[n])
 
                 ax.fill_between(dates, forecast__wide[0.250],forecast__wide[0.750], alpha=0.10, color=colors[n])
@@ -94,6 +95,8 @@ if __name__ == "__main__":
 
             ax.tick_params(which="both",labelsize=6)
             ax.set_ylabel("inc hosps",fontsize=8)
+
+            ax.legend(fontsize=9, frameon=False)
             
             ax.set_xlabel("")
             if n<6:
